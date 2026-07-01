@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VICTORY — Làm chủ tài chính, làm chủ tương lai</title>
+<meta name="description" content="VICTORY là app quản lý tài chính cá nhân miễn phí giúp bạn kiểm soát dòng tiền, xây dựng tài sản và đạt tự do tài chính sớm hơn — riêng tư 100%, không cần đăng ký." />
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/landing.css" />
+</head>
+<body>
+<script>
+(function () {
+  // Bỏ qua màn hình chào bên trong các khung xem trước (iframe) trên landing page,
+  // vì khách đã thấy phần giới thiệu ở ngay trang này.
+  try { localStorage.setItem('victory_splash_seen', '1'); } catch (e) {}
+
+  // Nạp sẵn dữ liệu minh họa vào các khung xem trước (index.html?demo=1) TRƯỚC khi
+  // trình duyệt kịp tải iframe, để khách thấy ngay app với số liệu thật thay vì
+  // trạng thái rỗng. Dùng key riêng (victory_app_state_demo_v1) — hoàn toàn tách biệt
+  // với dữ liệu thật của người dùng trên index.html thông thường, không bao giờ đụng tới.
+  function localISO(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  var today = new Date();
+  var uidSeq = 0;
+  function uid() { uidSeq++; return 'demo' + uidSeq; }
+  function dayOfMonth(day) { return new Date(today.getFullYear(), today.getMonth(), Math.min(day, today.getDate())); }
+
+  var netWorthHistory = [];
+  for (var i = 5; i >= 0; i--) {
+    var d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    netWorthHistory.push({ date: localISO(d), value: 1550000000 + (5 - i) * 96000000 });
+  }
+
+  var demoState = {
+    profile: { name: 'Minh', birthYear: today.getFullYear() - 30, retireAgeGoal: 45, monthlyExpenseTarget: 15000000, safeWithdrawalRate: 0.04, expectedReturnRate: 0.08 },
+    transactions: [
+      { id: uid(), type: 'income', date: localISO(dayOfMonth(1)), amount: 25000000, category: 'Lương', note: 'Lương tháng' },
+      { id: uid(), type: 'expense', date: localISO(dayOfMonth(3)), amount: 6000000, category: 'Ăn uống', note: '' },
+      { id: uid(), type: 'expense', date: localISO(dayOfMonth(4)), amount: 4500000, category: 'Nhà ở', note: 'Thuê nhà' },
+      { id: uid(), type: 'expense', date: localISO(dayOfMonth(6)), amount: 1200000, category: 'Di chuyển', note: '' },
+      { id: uid(), type: 'expense', date: localISO(dayOfMonth(8)), amount: 800000, category: 'Giải trí', note: '' },
+      { id: uid(), type: 'income', date: localISO(dayOfMonth(1)), amount: 3000000, category: 'Đầu tư', note: 'Cổ tức' }
+    ],
+    budgets: [{ category: 'Ăn uống', monthlyLimit: 7000000 }, { category: 'Giải trí', monthlyLimit: 1000000 }],
+    emergencyFund: { current: 45000000, target: 60000000 },
+    debts: [{ id: uid(), name: 'Vay mua xe', principal: 300000000, remaining: 180000000, interestRate: 0.09, monthlyPayment: 8000000 }],
+    assets: [
+      { id: uid(), name: 'Tiết kiệm ngân hàng', type: 'saving', value: 150000000 },
+      { id: uid(), name: 'Cổ phiếu VN30', type: 'stock', value: 80000000 },
+      { id: uid(), name: 'Căn hộ cho thuê', type: 'realestate', value: 1800000000 }
+    ],
+    passiveIncomes: [{ id: uid(), source: 'Cho thuê căn hộ', monthlyAmount: 8000000 }, { id: uid(), source: 'Cổ tức đầu tư', monthlyAmount: 1500000 }],
+    lifeGoals: [
+      { id: uid(), title: 'Du lịch Nhật Bản', category: 'travel', done: false },
+      { id: uid(), title: 'Học đầu tư chứng khoán bài bản', category: 'career', done: true },
+      { id: uid(), title: 'Xây quỹ học bổng nhỏ cho trẻ em', category: 'community', done: false }
+    ],
+    missions: [{ id: uid(), title: 'Nghỉ hưu ở tuổi 45', type: 'retire_early', targetAmount: 6000000000, targetDate: (today.getFullYear() + 15) + '-01-01', currentSaved: 230000000, notes: 'Dựa trên chi phí sinh hoạt mục tiêu và tỷ lệ rút an toàn 4%.' }],
+    categories: {
+      income: ['Lương', 'Thưởng', 'Kinh doanh', 'Đầu tư', 'Thu nhập thụ động', 'Khác'],
+      expense: ['Ăn uống', 'Nhà ở', 'Di chuyển', 'Hóa đơn & tiện ích', 'Sức khỏe', 'Giáo dục', 'Giải trí', 'Mua sắm', 'Trả nợ', 'Từ thiện', 'Khác']
+    },
+    netWorthHistory: netWorthHistory,
+    settings: { currency: 'VND', locale: 'vi-VN' },
+    meta: { createdAt: new Date().toISOString(), lastSnapshot: null }
+  };
+  try { localStorage.setItem('victory_app_state_demo_v1', JSON.stringify(demoState)); } catch (e) {}
+})();
+</script>
+
+<nav class="lp-nav">
+  <div class="lp-nav-brand">
+    <div class="lp-nav-logo">V</div>
+    <div class="lp-nav-name">VICTORY</div>
+  </div>
+  <div class="lp-nav-links">
+    <a href="#pillars" class="lp-hide-mobile">Tính năng</a>
+    <a href="#showcase" class="lp-hide-mobile">Trải nghiệm</a>
+    <a href="#pricing" class="lp-hide-mobile">Bảng giá</a>
+    <a href="#bonus" class="lp-hide-mobile">Bonus</a>
+    <a href="#faq" class="lp-hide-mobile">Hỏi đáp</a>
+    <a href="index.html" class="btn btn-primary btn-sm">Dùng thử miễn phí</a>
+  </div>
+</nav>
+
+<header class="lp-hero">
+  <div class="lp-hero-text">
+    <div class="lp-hero-badge">✨ Dùng thử miễn phí 7 ngày · Riêng tư 100%</div>
+    <h1 class="lp-hero-title">Sớm đạt <span class="accent">Tự Do Tài Chính</span> cùng VICTORY</h1>
+    <p class="lp-hero-slogan">"Làm chủ tài chính, làm chủ tương lai."</p>
+    <p class="lp-hero-desc">VICTORY không chỉ là app ghi chép chi tiêu. Đây là người đồng hành giúp bạn kiểm soát dòng tiền, xây dựng tài sản và biến mục tiêu sống — du lịch, nghỉ hưu sớm, cho đi — thành kế hoạch tài chính cụ thể.</p>
+    <div class="lp-hero-ctas">
+      <a href="index.html" class="btn btn-primary lp-btn-lg">Dùng thử miễn phí →</a>
+      <a href="#pillars" class="btn btn-secondary lp-btn-lg">Xem tính năng</a>
+    </div>
+    <div class="lp-trust-row">
+      <span>🔒 Dữ liệu lưu ngay trên máy bạn</span>
+      <span>⚡ Không cần đăng ký</span>
+      <span>🚫 Không quảng cáo</span>
+    </div>
+  </div>
+  <div class="lp-hero-phone-wrap">
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <div class="phone-screen"><iframe src="index.html?demo=1#/dashboard" title="VICTORY app demo"></iframe></div>
+    </div>
+  </div>
+</header>
+
+<section class="lp-section" id="pain">
+  <div class="lp-eyebrow" style="display:flex; justify-content:center; margin-left:auto; margin-right:auto; width:fit-content;">VẤN ĐỀ THƯỜNG GẶP</div>
+  <h2 class="lp-h2">Bạn có đang...</h2>
+  <p class="lp-sub">Hầu hết các app tài chính chỉ dừng lại ở việc ghi chép chi tiêu — còn VICTORY giúp bạn nhìn thấy cả hành trình.</p>
+  <div class="lp-pain-list">
+    <div class="lp-pain-item">
+      <div class="lp-pain-icon">😵‍💫</div>
+      <div class="lp-pain-title">Không biết tiền đi đâu mỗi tháng?</div>
+      <p class="lp-pain-desc">Chi tiêu rải rác, không có bức tranh tổng thể về dòng tiền và ngân sách.</p>
+    </div>
+    <div class="lp-pain-item">
+      <div class="lp-pain-icon">🌫️</div>
+      <div class="lp-pain-title">Không biết bao giờ mới "đủ"?</div>
+      <p class="lp-pain-desc">Tiết kiệm và đầu tư nhưng không rõ khi nào đạt được tự do tài chính.</p>
+    </div>
+    <div class="lp-pain-item">
+      <div class="lp-pain-icon">🔗</div>
+      <div class="lp-pain-title">Tiền bạc và mục tiêu sống tách rời?</div>
+      <p class="lp-pain-desc">Muốn du lịch, nghỉ hưu sớm, cho đi — nhưng chưa có kế hoạch tài chính cụ thể.</p>
+    </div>
+  </div>
+</section>
+
+<section class="lp-section" id="pillars">
+  <div class="lp-eyebrow" style="display:flex; justify-content:center; margin-left:auto; margin-right:auto; width:fit-content;">GIẢI PHÁP</div>
+  <h2 class="lp-h2">Ba trụ cột của VICTORY</h2>
+  <p class="lp-sub">Một hành trình liền mạch: từ kiểm soát dòng tiền, đến xây dựng tài sản, đến sống cuộc đời bạn mong muốn.</p>
+  <div class="lp-pillars">
+    <div class="lp-pillar-card lp-pillar-1">
+      <div class="lp-pillar-icon">💵</div>
+      <div class="lp-pillar-title">Quản lý tiền</div>
+      <p class="lp-pillar-desc">Theo dõi thu nhập, chi tiêu, ngân sách, quỹ khẩn cấp và nợ — kiểm soát dòng tiền rõ ràng mỗi tháng.</p>
+    </div>
+    <div class="lp-pillar-card lp-pillar-2">
+      <div class="lp-pillar-icon">📈</div>
+      <div class="lp-pillar-title">Tăng trưởng tài sản</div>
+      <p class="lp-pillar-desc">Theo dõi tài sản ròng, phân bổ đầu tư, thu nhập thụ động và máy tính Tự Do Tài Chính (FIRE).</p>
+    </div>
+    <div class="lp-pillar-card lp-pillar-3">
+      <div class="lp-pillar-icon">🌍</div>
+      <div class="lp-pillar-title">Thiết kế cuộc sống</div>
+      <p class="lp-pillar-desc">Đặt mục tiêu sống và để Mission Planner tính lộ trình tài chính cụ thể để đạt được chúng.</p>
+    </div>
+  </div>
+</section>
+
+<section class="lp-section" id="features">
+  <h2 class="lp-h2">Đầy đủ công cụ bạn cần</h2>
+  <p class="lp-sub">Không cần nhiều app rời rạc — VICTORY gộp mọi thứ vào một nơi duy nhất.</p>
+  <div class="lp-features-grid">
+    <div class="lp-feature-card">
+      <div class="lp-feature-icon">🧾</div>
+      <div class="lp-feature-title">Theo dõi thu chi thông minh</div>
+      <p class="lp-feature-desc">Ghi chép giao dịch nhanh, phân loại theo danh mục tùy chỉnh, xem báo cáo theo từng tháng.</p>
+    </div>
+    <div class="lp-feature-card">
+      <div class="lp-feature-icon">🎯</div>
+      <div class="lp-feature-title">Ngân sách & quỹ khẩn cấp</div>
+      <p class="lp-feature-desc">Đặt hạn mức chi tiêu theo danh mục, theo dõi tiến độ quỹ khẩn cấp 3-6 tháng chi phí.</p>
+    </div>
+    <div class="lp-feature-card">
+      <div class="lp-feature-icon">🏆</div>
+      <div class="lp-feature-title">Điểm VICTORY 7 trụ cột</div>
+      <p class="lp-feature-desc">Không chỉ đo chi tiêu — đánh giá toàn diện sức khỏe tài chính, tiết kiệm, đầu tư và tác động cộng đồng.</p>
+    </div>
+    <div class="lp-feature-card">
+      <div class="lp-feature-icon">🤖</div>
+      <div class="lp-feature-title">AI Coach mỗi ngày</div>
+      <p class="lp-feature-desc">Gợi ý cá nhân hóa dựa trên chính dữ liệu của bạn — cảnh báo chi tiêu bất thường, khích lệ đúng lúc.</p>
+    </div>
+    <div class="lp-feature-card">
+      <div class="lp-feature-icon">🚀</div>
+      <div class="lp-feature-title">Mission Planner</div>
+      <p class="lp-feature-desc">Mua nhà, nghỉ hưu sớm, du lịch vòng quanh thế giới — tính ngay số tiền cần tiết kiệm mỗi tháng.</p>
+    </div>
+    <div class="lp-feature-card">
+      <div class="lp-feature-icon">🔒</div>
+      <div class="lp-feature-title">Riêng tư tuyệt đối</div>
+      <p class="lp-feature-desc">Không máy chủ, không tài khoản. Dữ liệu tài chính của bạn chỉ nằm trên thiết bị của bạn.</p>
+    </div>
+  </div>
+</section>
+
+<section class="lp-section" id="showcase">
+  <h2 class="lp-h2">Trải nghiệm thật, ngay trên trang này</h2>
+  <p class="lp-sub">Đây là ứng dụng VICTORY thật — không phải ảnh mô phỏng. Thử chạm và khám phá.</p>
+  <div class="lp-showcase-row">
+    <div class="lp-showcase-item">
+      <div class="phone-frame small">
+        <div class="phone-notch"></div>
+        <div class="phone-screen"><iframe src="index.html?demo=1#/money" title="Quản lý tiền"></iframe></div>
+      </div>
+      <div class="lp-showcase-caption">Quản lý tiền</div>
+      <div class="lp-showcase-sub">Thu chi, ngân sách, nợ</div>
+    </div>
+    <div class="lp-showcase-item">
+      <div class="phone-frame small">
+        <div class="phone-notch"></div>
+        <div class="phone-screen"><iframe src="index.html?demo=1#/wealth" title="Tăng trưởng tài sản"></iframe></div>
+      </div>
+      <div class="lp-showcase-caption">Tăng trưởng tài sản</div>
+      <div class="lp-showcase-sub">Đầu tư, FIRE Calculator</div>
+    </div>
+    <div class="lp-showcase-item">
+      <div class="phone-frame small">
+        <div class="phone-notch"></div>
+        <div class="phone-screen"><iframe src="index.html?demo=1#/life" title="Thiết kế cuộc sống"></iframe></div>
+      </div>
+      <div class="lp-showcase-caption">Thiết kế cuộc sống</div>
+      <div class="lp-showcase-sub">Mission Planner</div>
+    </div>
+  </div>
+</section>
+
+<section class="lp-section">
+  <div class="lp-score-section">
+    <div class="lp-score-text">
+      <h3>🏆 Điểm VICTORY — không chỉ là số dư tài khoản</h3>
+      <p>Mỗi lần mở app, bạn thấy ngay tiến độ toàn diện của mình trên 7 trụ cột — để biết chính xác điều gì đang giúp bạn tiến gần hơn tới tự do tài chính, và điều gì đang cản trở.</p>
+      <ul class="lp-score-list">
+        <li>✅ Sức khỏe tài chính</li>
+        <li>✅ Khả năng tiết kiệm</li>
+        <li>✅ Hiệu quả đầu tư</li>
+        <li>✅ Thu nhập thụ động</li>
+        <li>✅ Tiến độ tự do tài chính</li>
+        <li>✅ Cân bằng cuộc sống</li>
+      </ul>
+    </div>
+    <div class="lp-score-phone">
+      <div class="phone-frame small">
+        <div class="phone-notch"></div>
+        <div class="phone-screen"><iframe src="index.html?demo=1#/dashboard" title="VICTORY Score"></iframe></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="lp-section" id="pricing">
+  <div class="lp-eyebrow" style="display:flex; justify-content:center; margin-left:auto; margin-right:auto; width:fit-content;">BẢNG GIÁ</div>
+  <h2 class="lp-h2">Đơn giản, minh bạch</h2>
+  <p class="lp-sub">Dùng thử toàn bộ tính năng miễn phí 7 ngày, không cần thẻ, không cần chuyển khoản trước.</p>
+  <div class="lp-pricing-row">
+    <div class="lp-price-card">
+      <div class="lp-price-name">Dùng thử</div>
+      <div class="lp-price-value">0đ<span> / 7 ngày</span></div>
+      <ul class="lp-price-list">
+        <li>✅ Toàn bộ tính năng VICTORY</li>
+        <li>✅ Không cần đăng ký</li>
+        <li>✅ Không cần thẻ / chuyển khoản</li>
+      </ul>
+      <a href="index.html" class="btn btn-secondary lp-btn-lg" style="width:100%; justify-content:center;">Dùng thử ngay →</a>
+    </div>
+    <div class="lp-price-card lp-price-highlight">
+      <div class="lp-price-name">Đồng hành cùng VICTORY</div>
+      <div class="lp-price-value">66.000đ<span> / tháng</span></div>
+      <ul class="lp-price-list">
+        <li>✅ Mọi thứ trong gói dùng thử</li>
+        <li>✅ Tiếp tục sau 7 ngày dùng thử</li>
+        <li>✅ Ủng hộ đội ngũ phát triển VICTORY</li>
+      </ul>
+      <img class="lp-qr-img" id="pricingQrImg" src="https://img.vietqr.io/image/acb-30116809-compact2.png?amount=66000&addInfo=VICTORY%20thang&accountName=NGUYEN%20THI%20ANH%20THU" alt="Quét mã VietQR để thanh toán 66.000đ cho VICTORY" />
+      <p class="lp-price-note">Quét mã bằng app ngân hàng bất kỳ (hỗ trợ VietQR/Napas 247). Nội dung chuyển khoản tự điền mã riêng cho bạn để đối chiếu.</p>
+      <div id="pricingCheckArea"></div>
+    </div>
+  </div>
+</section>
+
+<section class="lp-section" id="bonus">
+  <div class="lp-eyebrow" style="display:flex; justify-content:center; margin-left:auto; margin-right:auto; width:fit-content;">TẶNG KÈM KHI ĐỒNG HÀNH</div>
+  <h2 class="lp-h2">5 Bonus đặc biệt dành cho bạn</h2>
+  <p class="lp-sub">Không chỉ là app — là cả một hệ sinh thái học và thực hành tài chính cá nhân.</p>
+  <div class="lp-features-grid">
+    <div class="lp-feature-card">
+      <div class="lp-feature-icon">🎓</div>
+      <div class="lp-feature-title">Khóa học Quản lý Tài chính Cá nhân</div>
+      <p class="lp-feature-desc">8 chương từ tư duy tiền bạc, lập kế hoạch, đầu tư cho người mới đến thực hành ngay trong VICTORY.</p>
+    </div>
+    <div class="lp-feature-card">
+      <div class="lp-feature-icon">📘</div>
+      <div class="lp-feature-title">Cẩm nang sử dụng VICTORY</div>
+      <p class="lp-feature-desc">Hướng dẫn từng bước, bấm là tới thẳng tính năng — không cần dò tìm.</p>
+    </div>
+    <div class="lp-feature-card">
+      <div class="lp-feature-icon">💡</div>
+      <div class="lp-feature-title">100 Mẹo Tiêu dùng Thông minh</div>
+      <p class="lp-feature-desc">Mẹo mới mỗi ngày ngay trên Tổng quan, cộng bộ sưu tập đầy đủ 100 mẹo.</p>
+    </div>
+    <div class="lp-feature-card">
+      <div class="lp-feature-icon">📊</div>
+      <div class="lp-feature-title">Bộ mẫu quản lý tài chính</div>
+      <p class="lp-feature-desc">Không cần file Excel rời rạc — mọi mẫu (ngân sách, trả nợ, tài sản, đầu tư...) đã có sẵn trong app.</p>
+    </div>
+    <div class="lp-feature-card">
+      <div class="lp-feature-icon">🏆</div>
+      <div class="lp-feature-title">Thử thách 30 Ngày Làm Chủ Tài Chính</div>
+      <p class="lp-feature-desc">Lộ trình 4 tuần, hoàn thành để nhận huy hiệu "Nhà Quản Lý Tài Chính".</p>
+    </div>
+    <div class="lp-feature-card">
+      <div class="lp-feature-icon">🧭</div>
+      <div class="lp-feature-title">Tư vấn tài chính cá nhân</div>
+      <p class="lp-feature-desc">Công cụ phân bổ dòng tiền 50/30/20, chatbot hỗ trợ và đặt lịch Coach 1:1 với chuyên gia.</p>
+    </div>
+  </div>
+</section>
+
+<section class="lp-section">
+  <div class="lp-cta-banner">
+    <h2>Bắt đầu hành trình tự do tài chính ngay hôm nay</h2>
+    <p>Dùng thử miễn phí 7 ngày. Không quảng cáo. Không cần tài khoản.</p>
+    <a href="index.html" class="btn btn-primary lp-btn-lg">Dùng thử miễn phí →</a>
+  </div>
+</section>
+
+<section class="lp-section" id="faq" style="max-width: 720px;">
+  <h2 class="lp-h2">Câu hỏi thường gặp</h2>
+  <div id="faqList">
+    <div class="lp-faq-item">
+      <div class="lp-faq-q"><span>VICTORY có thật sự miễn phí không?</span><span class="lp-faq-icon">+</span></div>
+      <div class="lp-faq-a">VICTORY cho dùng thử miễn phí toàn bộ tính năng trong 7 ngày đầu. Sau đó, để tiếp tục sử dụng, bạn ủng hộ 66.000đ/tháng qua chuyển khoản VietQR — không tự động trừ tiền, không ràng buộc.</div>
+    </div>
+    <div class="lp-faq-item">
+      <div class="lp-faq-q"><span>Dữ liệu tài chính của tôi có an toàn không?</span><span class="lp-faq-icon">+</span></div>
+      <div class="lp-faq-a">Tuyệt đối an toàn — VICTORY không có máy chủ lưu dữ liệu người dùng. Mọi thông tin chỉ được lưu trên trình duyệt/thiết bị của chính bạn.</div>
+    </div>
+    <div class="lp-faq-item">
+      <div class="lp-faq-q"><span>Tôi có cần tạo tài khoản không?</span><span class="lp-faq-icon">+</span></div>
+      <div class="lp-faq-a">Không cần đăng ký hay đăng nhập. Mở app lên là dùng được ngay.</div>
+    </div>
+    <div class="lp-faq-item">
+      <div class="lp-faq-q"><span>VICTORY dùng được trên điện thoại chứ?</span><span class="lp-faq-icon">+</span></div>
+      <div class="lp-faq-a">Có, giao diện được tối ưu riêng cho điện thoại. Bạn có thể lưu ra màn hình chính để dùng như một app thật.</div>
+    </div>
+    <div class="lp-faq-item">
+      <div class="lp-faq-q"><span>AI Coach có gửi dữ liệu của tôi ra ngoài không?</span><span class="lp-faq-icon">+</span></div>
+      <div class="lp-faq-a">Không. Toàn bộ gợi ý được tính bằng công thức tài chính ngay trên máy bạn, không gọi bất kỳ máy chủ AI nào bên ngoài.</div>
+    </div>
+  </div>
+</section>
+
+<footer class="lp-footer">
+  <div class="lp-footer-inner">
+    <div class="lp-footer-brand">
+      <div class="lp-nav-logo">V</div>
+      <div>
+        <div style="font-weight:800; letter-spacing:1px;">VICTORY</div>
+        <div class="lp-footer-slogan">Làm chủ tài chính, làm chủ tương lai.</div>
+      </div>
+    </div>
+    <div class="lp-footer-copy">© 2026 VICTORY · Sản phẩm dành cho NHÓM VICTORY</div>
+  </div>
+</footer>
+
+<script src="js/storage.js"></script>
+<script src="js/landing.js"></script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VICTORY - Hành trình Tự Do Tài Chính</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="splashScreen" class="splash-screen">
+  <div class="splash-hill splash-hill-back"></div>
+  <div class="splash-hill splash-hill-front"></div>
+  <div class="splash-content">
+    <div class="splash-logo">
+      <span class="splash-logo-spark">✨</span>
+      <div class="splash-logo-ring"><span class="splash-logo-v">V</span></div>
+      <span class="splash-logo-leaf">🌿</span>
+    </div>
+    <h1 class="splash-wordmark">VICTORY</h1>
+    <div class="splash-tagline">APP TỰ DO TÀI CHÍNH</div>
+    <p class="splash-slogan">“Làm chủ tài chính,<br/>làm chủ tương lai.”</p>
+    <button class="btn btn-primary splash-cta" id="splashStartBtn">Bắt đầu hành trình →</button>
+  </div>
+</div>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-badge">V</div>
+      <div>
+        <div class="brand-name">VICTORY</div>
+        <div class="brand-sub">Tự do tài chính</div>
+      </div>
+    </div>
+    <nav id="sideNav">
+      <a href="#/dashboard" class="nav-link" data-route="dashboard"><span class="nav-icon">🏠</span> Tổng quan</a>
+      <a href="#/money" class="nav-link" data-route="money"><span class="nav-icon">💵</span> Quản lý tiền</a>
+      <a href="#/wealth" class="nav-link" data-route="wealth"><span class="nav-icon">📈</span> Tăng trưởng tài sản</a>
+      <a href="#/life" class="nav-link" data-route="life"><span class="nav-icon">🌍</span> Thiết kế cuộc sống</a>
+      <a href="#/settings" class="nav-link" data-route="settings"><span class="nav-icon">⚙️</span> Cài đặt</a>
+    </nav>
+    <div class="sidebar-footer">Dữ liệu lưu tại trình duyệt của bạn — riêng tư 100%.</div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 id="pageTitle">Tổng quan</h1>
+        <p class="sub" id="pageSub">Hành trình tự do tài chính của bạn</p>
+      </div>
+      <div class="flex gap-8">
+        <button class="btn btn-secondary btn-sm" id="quickAddBtn">+ Thêm giao dịch</button>
+      </div>
+    </div>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<nav class="mobile-nav v2">
+  <a href="#/dashboard" data-route="dashboard"><span class="nav-icon">🏠</span>Tổng quan</a>
+  <a href="#/money" data-route="money"><span class="nav-icon">🧾</span>Giao dịch</a>
+  <a href="#" id="fabAddBtn" class="fab-btn">+</a>
+  <a href="#/life" data-route="life"><span class="nav-icon">🎯</span>Kế hoạch</a>
+  <a href="#/settings" data-route="settings"><span class="nav-icon">👤</span>Cá nhân</a>
+</nav>
+
+<div id="modalRoot"></div>
+
+<script src="js/storage.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
