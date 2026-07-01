@@ -1,7 +1,7 @@
 // VICTORY Landing Page - accordion FAQ + QR thanh toán tự động
 // Điền URL Worker sau khi triển khai (xem backend/HUONG-DAN.md) — phải trùng với
 // SEPAY_WORKER_URL trong js/ui.js. Để trống thì chỉ hiện QR, ẩn nút kiểm tra tự động.
-const LANDING_SEPAY_WORKER_URL = '';
+const LANDING_SEPAY_WORKER_URL = 'https://victory-lime.vercel.app/api';
 const LANDING_MONTHLY_PRICE = 66000;
 
 document.addEventListener('DOMContentLoaded', () => {

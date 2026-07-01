@@ -16,7 +16,7 @@
   const BANNER_DISMISS_KEY = 'victory_trial_banner_dismissed_date';
   // Điền URL Cloudflare Worker sau khi triển khai (xem backend/HUONG-DAN.md) để bật
   // kiểm tra thanh toán SePay tự động. Để trống '' thì app dùng luồng xác nhận thủ công qua email.
-  const SEPAY_WORKER_URL = '';
+  const SEPAY_WORKER_URL = 'https://victory-lime.vercel.app/api';
 
   function vietqrUrl(code) {
     const addInfo = encodeURIComponent('VICTORY-' + code);
