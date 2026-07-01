@@ -304,6 +304,26 @@
     return !!(state.meta.paidUntil && state.meta.paidUntil > Date.now());
   }
 
+  const AUTO_CHECK_KEY = 'victory_last_auto_check_date';
+  // Âm thầm kiểm tra thanh toán mỗi khi mở app (tối đa 1 lần/ngày), để việc xác nhận
+  // thật sự "tự động" — người dùng không cần tự bấm nút kiểm tra sau khi chuyển khoản.
+  async function silentCheckPaymentOnLoad() {
+    if (!SEPAY_WORKER_URL || !state.meta.paymentCode) return;
+    if (isPaidActive() && (state.meta.paidUntil - Date.now()) > 3 * 86400000) return; // còn hạn xa thì bỏ qua
+    const today = Calc.localISODate(new Date());
+    if (localStorage.getItem(AUTO_CHECK_KEY) === today) return;
+    localStorage.setItem(AUTO_CHECK_KEY, today);
+    try {
+      const res = await fetch(SEPAY_WORKER_URL + '/status?code=' + encodeURIComponent(state.meta.paymentCode));
+      const data = await res.json();
+      if (data.paid && data.paidUntil !== state.meta.paidUntil) {
+        state.meta.paidUntil = data.paidUntil;
+        persist();
+        if (currentRouteKey() === 'dashboard' || currentRouteKey() === 'settings') rerender();
+      }
+    } catch (e) { /* im lặng bỏ qua nếu không có mạng */ }
+  }
+
   function trialBannerHtml() {
     if (isPaidActive()) return '';
     const days = Calc.daysSinceInstall(state);
@@ -1513,5 +1533,7 @@
 
     if (localStorage.getItem(SPLASH_SEEN_KEY)) hideSplash();
     document.getElementById('splashStartBtn').addEventListener('click', hideSplash);
+
+    silentCheckPaymentOnLoad();
   });
 })();

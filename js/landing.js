@@ -15,7 +15,29 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   setupPricingQr();
+  silentCheckPaymentOnLoad();
 });
+
+const AUTO_CHECK_KEY = 'victory_last_auto_check_date';
+async function silentCheckPaymentOnLoad() {
+  if (!LANDING_SEPAY_WORKER_URL || typeof Store === 'undefined') return;
+  const state = Store.load();
+  if (!state.meta.paymentCode) return;
+  const isPaid = state.meta.paidUntil && state.meta.paidUntil > Date.now();
+  if (isPaid && (state.meta.paidUntil - Date.now()) > 3 * 86400000) return;
+  const today = new Date().toISOString().slice(0, 10);
+  if (localStorage.getItem(AUTO_CHECK_KEY) === today) return;
+  localStorage.setItem(AUTO_CHECK_KEY, today);
+  try {
+    const res = await fetch(LANDING_SEPAY_WORKER_URL + '/status?code=' + encodeURIComponent(state.meta.paymentCode));
+    const data = await res.json();
+    if (data.paid) {
+      const fresh = Store.load();
+      fresh.meta.paidUntil = data.paidUntil;
+      Store.save(fresh);
+    }
+  } catch (e) { /* im lặng bỏ qua nếu không có mạng */ }
+}
 
 // Dùng chung state thật của app (Store, key victory_app_state_v1) — KHÔNG phải state
 // demo trong các khung xem trước — để mã thanh toán đồng bộ giữa landing page và app.
