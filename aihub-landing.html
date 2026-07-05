@@ -38,9 +38,10 @@
 
   .nav{position:sticky;top:0;z-index:50;background:rgba(10,17,48,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);}
   .nav-inner{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;max-width:1080px;margin:0 auto;}
-  .logo{display:flex;align-items:center;}
-  .logo-icon{height:72px;width:100px;object-fit:cover;object-position:top center;display:block;flex:none;}
-  @media (max-width:480px){.logo-icon{height:56px;width:78px;}}
+  .logo{display:flex;align-items:center;gap:14px;}
+  .logo-icon{height:52px;width:auto;display:block;flex:none;}
+  .logo-text-img{height:38px;width:auto;display:block;flex:none;}
+  @media (max-width:480px){.logo-icon{height:40px;}.logo-text-img{height:28px;}}
   .nav-links{display:flex;gap:28px;font-size:14.5px;color:var(--ink-300);}
   .nav-links a:hover{color:#fff;}
   .nav-cta{display:flex;align-items:center;gap:10px;}
@@ -144,11 +145,33 @@
     .hero h1{font-size:29px;}
     .hero p.lead{font-size:14.5px;}
     .sec-head h2{font-size:23px;}
-    .logo{font-size:19px;}
     .nav-inner{padding:12px 16px;}
     .wrap{padding:0 16px;}
     .card-badge{font-size:10px;padding:4px 34px;}
   }
+
+  /* FLOATING ZALO + CHATBOT */
+  .fab-stack{position:fixed;right:18px;bottom:24px;z-index:70;display:flex;flex-direction:column;gap:12px;}
+  @media (max-width:760px){.fab-stack{bottom:90px;}}
+  .fab{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;border:none;box-shadow:0 8px 20px rgba(0,0,0,.4);}
+  .fab-zalo{background:linear-gradient(180deg,var(--green-500),var(--green-600));}
+  .fab-chat{background:linear-gradient(135deg,var(--blue-500),var(--purple-500));}
+
+  .chat-panel{position:fixed;right:18px;bottom:90px;z-index:80;width:320px;max-width:calc(100vw - 36px);
+    background:linear-gradient(180deg,var(--card),var(--bg-800));border:1px solid var(--line);border-radius:16px;
+    box-shadow:0 16px 40px rgba(0,0,0,.5);display:flex;flex-direction:column;overflow:hidden;
+    opacity:0;pointer-events:none;transform:translateY(12px);transition:opacity .2s ease, transform .2s ease;}
+  .chat-panel.open{opacity:1;pointer-events:auto;transform:translateY(0);}
+  @media (max-width:760px){.chat-panel{bottom:156px;}}
+  .chat-header{background:rgba(255,255,255,.04);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;font-weight:700;border-bottom:1px solid var(--line);}
+  .chat-close{background:none;border:none;color:var(--ink-300);font-size:16px;cursor:pointer;padding:2px 6px;}
+  .chat-body{padding:14px 16px;overflow-y:auto;max-height:230px;display:flex;flex-direction:column;gap:10px;}
+  .chat-msg{padding:9px 12px;border-radius:12px;font-size:13.5px;line-height:1.5;max-width:88%;}
+  .chat-msg.bot{background:rgba(90,167,255,.14);color:var(--ink-100);align-self:flex-start;border-bottom-left-radius:4px;}
+  .chat-msg.user{background:linear-gradient(135deg,var(--blue-500),var(--purple-500));color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
+  .chat-quick{display:flex;flex-direction:column;gap:8px;padding:12px 16px;border-top:1px solid var(--line);}
+  .chat-quick button{background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--ink-100);padding:9px 12px;border-radius:10px;font-size:13px;text-align:left;cursor:pointer;font-family:inherit;}
+  .chat-quick button:hover{background:rgba(90,167,255,.14);}
 </style>
 </head>
 <body>
@@ -158,7 +181,8 @@
 <nav class="nav">
   <div class="nav-inner">
     <a href="#" class="logo">
-      <img src="img/aihub-logo.png" alt="AIHub" class="logo-icon" />
+      <img src="img/aihub-icon.png" alt="AIHub" class="logo-icon" />
+      <img src="img/aihub-text.png" alt="AIHub — AI Tools, Giá tốt, Hỗ trợ 24/7" class="logo-text-img" />
     </a>
     <div class="nav-links">
       <a href="#products">Sản phẩm &amp; Giá</a>
@@ -410,6 +434,27 @@
   <a class="zalo" href="https://zalo.me/0903887366" target="_blank" rel="noopener">💬 Nhắn Zalo</a>
 </div>
 
+<div class="fab-stack">
+  <a href="https://zalo.me/0903887366" target="_blank" rel="noopener" class="fab fab-zalo" title="Chat Zalo" aria-label="Chat Zalo">💬</a>
+  <button type="button" class="fab fab-chat" id="chat-toggle" title="Trợ lý AIHub" aria-label="Trợ lý AIHub">🤖</button>
+</div>
+
+<div class="chat-panel" id="chat-panel">
+  <div class="chat-header">
+    <span>🤖 Trợ lý AIHub</span>
+    <button type="button" class="chat-close" id="chat-close" aria-label="Đóng">✕</button>
+  </div>
+  <div class="chat-body" id="chat-body">
+    <div class="chat-msg bot">Xin chào! Mình là trợ lý AIHub 👋 Bạn cần hỗ trợ gì ạ?</div>
+  </div>
+  <div class="chat-quick" id="chat-quick">
+    <button type="button" data-q="gia">💰 Bảng giá các gói AI</button>
+    <button type="button" data-q="thanhtoan">💳 Cách thanh toán</button>
+    <button type="button" data-q="kichhoat">⚡ Bao lâu thì được kích hoạt?</button>
+    <button type="button" data-q="lienhe">📞 Gặp nhân viên tư vấn</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -491,6 +536,55 @@
   });
 
   updateQR();
+
+  var chatPanel = document.getElementById('chat-panel');
+  var chatToggle = document.getElementById('chat-toggle');
+  var chatClose = document.getElementById('chat-close');
+  var chatBody = document.getElementById('chat-body');
+
+  var FAQ_LABEL = {
+    gia: '💰 Bảng giá các gói AI',
+    thanhtoan: '💳 Cách thanh toán',
+    kichhoat: '⚡ Bao lâu thì được kích hoạt?',
+    lienhe: '📞 Gặp nhân viên tư vấn'
+  };
+  var FAQ_ANSWER = {
+    gia: 'AIHub có 3 nhóm sản phẩm: Grok AI (99.000đ/tháng), Veo 3 Google DeepMind (từ 199.000đ/tháng), và Combo ChatGPT Plus · CapCut Pro · Gemini (từ 79.000đ/tháng). Mình đưa bạn tới bảng giá đầy đủ nhé!',
+    thanhtoan: 'Bạn chọn gói ở bảng giá → điền thông tin đăng ký → quét mã SePay/VietQR (tự động đúng số tiền) → nhắn Zalo hoặc gọi điện để được kích hoạt.',
+    kichhoat: 'Sau khi chuyển khoản và nhắn Zalo xác nhận, tài khoản thường được kích hoạt trong 5–30 phút.',
+    lienhe: 'Bạn gọi hoặc nhắn Zalo trực tiếp tới số 0903 887 366 để được tư vấn nhanh nhất nhé!'
+  };
+  var FAQ_SCROLL = { gia: 'products', thanhtoan: 'payment' };
+
+  function appendChatMsg(text, cls){
+    var div = document.createElement('div');
+    div.className = 'chat-msg ' + cls;
+    div.textContent = text;
+    chatBody.appendChild(div);
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
+
+  function openChat(){ chatPanel.classList.add('open'); }
+  function closeChat(){ chatPanel.classList.remove('open'); }
+
+  chatToggle.addEventListener('click', function(){
+    chatPanel.classList.contains('open') ? closeChat() : openChat();
+  });
+  chatClose.addEventListener('click', closeChat);
+
+  document.querySelectorAll('.chat-quick button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var key = btn.dataset.q;
+      appendChatMsg(FAQ_LABEL[key], 'user');
+      appendChatMsg(FAQ_ANSWER[key], 'bot');
+      if(FAQ_SCROLL[key]){
+        setTimeout(function(){
+          closeChat();
+          document.getElementById(FAQ_SCROLL[key]).scrollIntoView({behavior:'smooth', block:'start'});
+        }, 700);
+      }
+    });
+  });
 })();
 </script>
 
