@@ -601,34 +601,95 @@
     });
   });
 
-  var chatForm = document.getElementById('chat-form');
-  var chatInput = document.getElementById('chat-input');
-  var chatHistory = [];
+  window.__aihubAppendChatMsg = appendChatMsg;
+})();
+</script>
+
+<script type="module">
+  // Trợ lý AI chạy thẳng trong trình duyệt của khách (WebLLM + WebGPU) —
+  // không cần server, không cần tài khoản/API key, không tốn phí.
+  const MODEL_ID = "Qwen2.5-0.5B-Instruct-q4f16_1-MLC";
+  const SYSTEM_PROMPT = `Bạn là trợ lý AI của AIHub — cửa hàng bán tài khoản AI bản quyền (Grok, Veo 3, ChatGPT Plus, CapCut Pro, Gemini Google AI Pro).
+
+SẢN PHẨM & GIÁ:
+- Grok AI: 99.000đ/tháng, tặng kèm tool sản xuất ảnh & video hàng loạt bằng AI.
+- Veo 3 (Google DeepMind) Pro 18 tháng: giá ưu đãi, liên hệ trực tiếp để biết giá.
+- Veo 3 Ultra loại 0 credit: tài khoản cấp 199.000đ/tháng, tài khoản mail chính chủ 399.000đ/tháng.
+- Veo 3 Ultra loại có credit (12.500–60K), nâng mail chính chủ: 1 tháng 620.000đ, 3 tháng 1.299.000đ, 12 tháng 2.300.000đ.
+- ChatGPT Plus: TK dùng chung 79.000đ/tháng hoặc 520.000đ/năm; nâng mail chính chủ 899.000đ/năm; TK EDU 1.299.000đ/2 năm.
+- CapCut Pro: TK cấp (bảo hành 1 đổi 1) 520.000đ/năm; Gmail chính chủ 899.000đ/năm.
+- Gemini Google AI Pro: nâng mail chính chủ (Gemini, Veo3, NotebookLM...) 599.000đ/18 tháng.
+
+THANH TOÁN: khách chọn gói → điền form đăng ký → quét mã SePay/VietQR → nhắn Zalo hoặc gọi điện xác nhận.
+KÍCH HOẠT: thường trong 5–30 phút sau khi chuyển khoản và nhắn Zalo xác nhận.
+LIÊN HỆ: hotline/Zalo 0903 887 366.
+
+Trả lời tiếng Việt, ngắn gọn (2-4 câu), chỉ dùng đúng thông tin ở trên, không bịa thêm giá/gói khác. Với câu hỏi về đơn hàng cụ thể hoặc điều không chắc chắn, hướng khách nhắn Zalo/gọi 0903 887 366.`;
+
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  const chatSend = document.getElementById('chat-send');
+  const appendChatMsg = window.__aihubAppendChatMsg;
+
+  let engine = null;
+  let engineLoading = null;
+  let history = [];
+
+  function supportsWebGPU(){
+    return typeof navigator !== 'undefined' && !!navigator.gpu;
+  }
+
+  async function ensureEngine(onProgress){
+    if(engine) return engine;
+    if(engineLoading) return engineLoading;
+    const webllm = await import("https://esm.run/@mlc-ai/web-llm");
+    engineLoading = webllm.CreateMLCEngine(MODEL_ID, {
+      initProgressCallback: function(p){ onProgress(p.text || 'Đang tải trợ lý AI...'); }
+    }).then(function(e){ engine = e; return e; });
+    return engineLoading;
+  }
 
   chatForm.addEventListener('submit', function(e){
     e.preventDefault();
-    var text = chatInput.value.trim();
+    const text = chatInput.value.trim();
     if(!text) return;
-    appendChatMsg(text, 'user');
-    chatHistory.push({role:'user', content:text});
-    chatInput.value = '';
-    var typingEl = appendChatMsg('Đang trả lời…', 'bot typing');
 
-    fetch('/api/chat', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ message: text, history: chatHistory.slice(-6) })
-    }).then(function(r){ return r.json(); }).then(function(data){
-      typingEl.remove();
-      var reply = data.reply || data.error || 'Có lỗi xảy ra, vui lòng nhắn Zalo 0903 887 366.';
-      appendChatMsg(reply, 'bot');
-      chatHistory.push({role:'assistant', content:reply});
-    }).catch(function(){
-      typingEl.remove();
-      appendChatMsg('Không kết nối được trợ lý. Vui lòng nhắn Zalo 0903 887 366 để được hỗ trợ.', 'bot');
-    });
+    if(!supportsWebGPU()){
+      appendChatMsg(text, 'user');
+      appendChatMsg('Trình duyệt/thiết bị của bạn chưa hỗ trợ trợ lý AI trực tiếp. Bạn dùng giúp các câu hỏi nhanh phía trên, hoặc nhắn Zalo 0903 887 366 nhé!', 'bot');
+      chatInput.value = '';
+      return;
+    }
+
+    appendChatMsg(text, 'user');
+    history.push({ role: 'user', content: text });
+    chatInput.value = '';
+    chatSend.disabled = true;
+    const typingEl = appendChatMsg('Đang tải trợ lý AI lần đầu, vui lòng chờ chút...', 'bot typing');
+
+    ensureEngine(function(msg){ typingEl.textContent = msg; })
+      .then(function(eng){
+        typingEl.textContent = 'Đang trả lời…';
+        return eng.chat.completions.create({
+          messages: [{ role: 'system', content: SYSTEM_PROMPT }].concat(history.slice(-6)),
+          temperature: 0.4,
+          max_tokens: 300
+        });
+      })
+      .then(function(reply){
+        typingEl.remove();
+        const content = (reply.choices && reply.choices[0] && reply.choices[0].message.content) ||
+          'Xin lỗi, mình chưa có câu trả lời phù hợp. Bạn nhắn Zalo 0903 887 366 để được hỗ trợ trực tiếp nhé!';
+        appendChatMsg(content, 'bot');
+        history.push({ role: 'assistant', content: content });
+      })
+      .catch(function(err){
+        typingEl.remove();
+        appendChatMsg('Trợ lý AI gặp sự cố khi tải trên thiết bị này. Bạn dùng giúp câu hỏi nhanh phía trên, hoặc nhắn Zalo 0903 887 366 nhé!', 'bot');
+        console.error(err);
+      })
+      .finally(function(){ chatSend.disabled = false; });
   });
-})();
 </script>
 
 </body>
