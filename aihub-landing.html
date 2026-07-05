@@ -174,6 +174,11 @@
   .chat-quick{display:flex;flex-direction:column;gap:8px;padding:12px 16px;border-top:1px solid var(--line);}
   .chat-quick button{background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--ink-100);padding:9px 12px;border-radius:10px;font-size:13px;text-align:left;cursor:pointer;font-family:inherit;}
   .chat-quick button:hover{background:rgba(90,167,255,.14);}
+  .chat-input-row{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line);margin:0;}
+  .chat-input-row input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:#fff;font-size:13.5px;font-family:inherit;}
+  .chat-input-row input:focus{outline:none;border-color:var(--blue-500);}
+  .chat-input-row button{width:40px;flex:none;border-radius:10px;border:none;cursor:pointer;font-size:16px;background:linear-gradient(135deg,var(--blue-500),var(--purple-500));color:#fff;}
+  .chat-msg.typing{opacity:.6;font-style:italic;}
 </style>
 </head>
 <body>
@@ -458,6 +463,10 @@
     <button type="button" data-q="kichhoat">⚡ Bao lâu thì được kích hoạt?</button>
     <button type="button" data-q="lienhe">📞 Gặp nhân viên tư vấn</button>
   </div>
+  <form class="chat-input-row" id="chat-form">
+    <input type="text" id="chat-input" placeholder="Nhập câu hỏi của bạn..." maxlength="500" autocomplete="off" />
+    <button type="submit" id="chat-send" aria-label="Gửi">➤</button>
+  </form>
 </div>
 
 <div id="toast"></div>
@@ -567,6 +576,7 @@
     div.textContent = text;
     chatBody.appendChild(div);
     chatBody.scrollTop = chatBody.scrollHeight;
+    return div;
   }
 
   function openChat(){ chatPanel.classList.add('open'); }
@@ -588,6 +598,34 @@
           document.getElementById(FAQ_SCROLL[key]).scrollIntoView({behavior:'smooth', block:'start'});
         }, 700);
       }
+    });
+  });
+
+  var chatForm = document.getElementById('chat-form');
+  var chatInput = document.getElementById('chat-input');
+  var chatHistory = [];
+
+  chatForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    var text = chatInput.value.trim();
+    if(!text) return;
+    appendChatMsg(text, 'user');
+    chatHistory.push({role:'user', content:text});
+    chatInput.value = '';
+    var typingEl = appendChatMsg('Đang trả lời…', 'bot typing');
+
+    fetch('/api/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ message: text, history: chatHistory.slice(-6) })
+    }).then(function(r){ return r.json(); }).then(function(data){
+      typingEl.remove();
+      var reply = data.reply || data.error || 'Có lỗi xảy ra, vui lòng nhắn Zalo 0903 887 366.';
+      appendChatMsg(reply, 'bot');
+      chatHistory.push({role:'assistant', content:reply});
+    }).catch(function(){
+      typingEl.remove();
+      appendChatMsg('Không kết nối được trợ lý. Vui lòng nhắn Zalo 0903 887 366 để được hỗ trợ.', 'bot');
     });
   });
 })();
