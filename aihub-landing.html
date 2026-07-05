@@ -40,8 +40,10 @@
   .nav-inner{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;max-width:1080px;margin:0 auto;}
   .logo{display:flex;align-items:center;gap:14px;}
   .logo-icon{height:52px;width:auto;display:block;flex:none;}
-  .logo-text-img{height:38px;width:auto;display:block;flex:none;}
-  @media (max-width:480px){.logo-icon{height:40px;}.logo-text-img{height:28px;}}
+  .logo-text{display:flex;flex-direction:column;gap:5px;}
+  .logo-text-img{height:30px;width:auto;display:block;}
+  .logo-tagline{font-size:13px;font-weight:700;letter-spacing:1px;color:var(--blue-400);white-space:nowrap;}
+  @media (max-width:480px){.logo-icon{height:40px;}.logo-text-img{height:24px;}.logo-tagline{font-size:9.5px;}}
   .nav-links{display:flex;gap:28px;font-size:14.5px;color:var(--ink-300);}
   .nav-links a:hover{color:#fff;}
   .nav-cta{display:flex;align-items:center;gap:10px;}
@@ -182,7 +184,10 @@
   <div class="nav-inner">
     <a href="#" class="logo">
       <img src="img/aihub-icon.png" alt="AIHub" class="logo-icon" />
-      <img src="img/aihub-text.png" alt="AIHub — AI Tools, Giá tốt, Hỗ trợ 24/7" class="logo-text-img" />
+      <span class="logo-text">
+        <img src="img/aihub-text.png" alt="AIHub" class="logo-text-img" />
+        <span class="logo-tagline">AI TOOLS – GIÁ TỐT – HỖ TRỢ 24/7</span>
+      </span>
     </a>
     <div class="nav-links">
       <a href="#products">Sản phẩm &amp; Giá</a>
