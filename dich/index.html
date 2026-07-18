@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Phiên Dịch Trực Tiếp AI — Dịch hội thoại 2 chiều tức thì</title>
+<meta name="description" content="Ứng dụng phiên dịch trực tiếp bằng giọng nói, dịch tự nhiên hai chiều theo thời gian thực, chạy hoàn toàn trong trình duyệt bằng AI, không cần server hay API key." />
+
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#12183a" />
+<link rel="icon" type="image/png" sizes="192x192" href="../img/dich-icon-192.png" />
+<link rel="apple-touch-icon" href="../img/dich-apple-touch-icon.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Phiên Dịch" />
+
+<style>
+  :root{
+    --top-bg:#12183a; --top-ink:#f4f7ff; --top-sub:#9aa6d8;
+    --bottom-bg:#f6f7fb; --bottom-ink:#12183a; --bottom-sub:#6b7290;
+    --accent:#3b7dff; --accent-2:#8b5cf6;
+    --mic-idle:#3b7dff; --mic-listening:#ef4444; --mic-busy:#f4b73f;
+    font-size:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0;font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased;
+    padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+
+  .app{position:fixed;inset:0;display:flex;flex-direction:column;}
+  .panel{flex:1 1 50%;display:flex;align-items:center;justify-content:center;position:relative;min-height:0;}
+  .panel.top{background:var(--top-bg);color:var(--top-ink);}
+  .panel.bottom{background:var(--bottom-bg);color:var(--bottom-ink);}
+  .panel-inner{width:100%;max-width:480px;padding:18px 22px;display:flex;flex-direction:column;align-items:center;gap:14px;height:100%;justify-content:center;}
+  .panel.top .panel-inner{transform:rotate(180deg);}
+
+  .lang-select{appearance:none;-webkit-appearance:none;border:none;border-radius:999px;padding:9px 34px 9px 16px;font-size:14px;font-weight:700;cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 14px center;}
+  .panel.top .lang-select{background-color:rgba(255,255,255,.1);color:var(--top-ink);}
+  .panel.bottom .lang-select{background-color:rgba(18,24,58,.06);color:var(--bottom-ink);}
+  .lang-select:focus{outline:2px solid var(--accent);}
+
+  .transcript-wrap{flex:1;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:0;overflow-y:auto;padding:4px 2px;}
+  .transcript-line{width:100%;text-align:center;}
+  .transcript-line .orig{font-size:1.15rem;font-weight:600;line-height:1.4;word-break:break-word;}
+  .transcript-line .trans{font-size:1.4rem;font-weight:800;line-height:1.4;word-break:break-word;margin-top:2px;}
+  .panel.top .transcript-line .orig{color:var(--top-sub);}
+  .panel.bottom .transcript-line .orig{color:var(--bottom-sub);}
+  .placeholder{opacity:.5;font-size:1rem;text-align:center;padding:0 10px;}
+
+  .mic-btn{width:74px;height:74px;border-radius:50%;border:none;flex:none;cursor:pointer;
+    background:var(--mic-idle);color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 6px 20px rgba(59,125,255,.4);transition:transform .15s, background .2s;}
+  .mic-btn:active{transform:scale(.94);}
+  .mic-btn.listening{background:var(--mic-listening);box-shadow:0 0 0 0 rgba(239,68,68,.5);animation:pulse 1.2s infinite;}
+  .mic-btn.busy{background:var(--mic-busy);}
+  .mic-btn:disabled{opacity:.4;cursor:not-allowed;animation:none;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(239,68,68,.5);}
+    70%{box-shadow:0 0 0 22px rgba(239,68,68,0);}
+    100%{box-shadow:0 0 0 0 rgba(239,68,68,0);}
+  }
+
+  .center-bar{flex:none;height:56px;display:flex;align-items:center;justify-content:center;gap:10px;
+    background:#fff;border-top:1px solid #e6e8f0;border-bottom:1px solid #e6e8f0;position:relative;z-index:5;padding:0 10px;}
+  .swap-btn{width:38px;height:38px;border-radius:50%;border:none;background:#eef1fb;color:#3b7dff;font-size:18px;cursor:pointer;flex:none;}
+  .status-text{font-size:12.5px;color:#8890b3;max-width:36%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .brand-mini{position:absolute;left:14px;font-size:12px;font-weight:800;color:#b7bde0;letter-spacing:.5px;display:none;}
+  @media (min-width:520px){.brand-mini{display:block;}}
+  .install-btn{display:none;align-items:center;gap:6px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    color:#fff;font-size:12.5px;font-weight:700;border-radius:999px;padding:8px 14px;cursor:pointer;flex:none;white-space:nowrap;}
+  .install-btn.show{display:inline-flex;}
+
+  .keyboard-btn{width:38px;height:38px;border-radius:50%;border:none;background:rgba(120,140,220,.16);color:inherit;
+    font-size:15px;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center;}
+  .panel.bottom .keyboard-btn{background:rgba(18,24,58,.08);}
+  .type-row{display:none;width:100%;gap:8px;}
+  .type-row.show{display:flex;}
+  .type-row input{flex:1;border:none;border-radius:999px;padding:10px 16px;font-size:14px;}
+  .panel.top .type-row input{background:rgba(255,255,255,.12);color:var(--top-ink);}
+  .panel.bottom .type-row input{background:rgba(18,24,58,.07);color:var(--bottom-ink);}
+  .type-row input::placeholder{color:inherit;opacity:.55;}
+  .type-row button{border:none;border-radius:999px;padding:10px 16px;font-size:13px;font-weight:700;
+    background:var(--accent);color:#fff;cursor:pointer;flex:none;}
+  .mic-row{display:flex;align-items:center;gap:14px;}
+  .trans.replayable{cursor:pointer;}
+  .trans.replayable::after{content:' 🔊';font-size:.75em;opacity:.6;}
+
+  .overlay{position:fixed;inset:0;background:rgba(6,10,24,.92);color:#fff;display:none;
+    align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:50;text-align:center;padding:24px;}
+  .overlay.show{display:flex;}
+  .overlay .spinner{width:38px;height:38px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#5aa7ff;animation:spin 1s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .overlay .msg{font-size:14px;color:#cdd6ff;max-width:320px;}
+  .overlay .title{font-size:17px;font-weight:800;}
+
+  .toast{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);background:#1b2350;color:#fff;
+    padding:10px 18px;border-radius:999px;font-size:13px;z-index:60;opacity:0;transition:opacity .3s;pointer-events:none;max-width:88vw;text-align:center;}
+  .toast.show{opacity:1;}
+
+  .intro{position:fixed;inset:0;background:linear-gradient(160deg,#12183a,#1c2560 60%,#2a2470);color:#fff;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:80;padding:32px 26px;text-align:center;}
+  .intro img{width:84px;height:84px;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.35);}
+  .intro h1{font-size:22px;margin:0;}
+  .intro p{font-size:14px;color:#c3caf2;max-width:320px;line-height:1.6;margin:0;}
+  .intro ol{text-align:left;font-size:13.5px;color:#dfe3fa;line-height:1.8;max-width:300px;margin:0;padding-left:20px;}
+  .intro button{margin-top:6px;border:none;border-radius:999px;padding:13px 30px;font-size:14.5px;font-weight:800;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div class="intro" id="intro">
+  <img src="../img/dich-icon-192.png" alt="Phiên Dịch Trực Tiếp AI" />
+  <h1>Phiên Dịch Trực Tiếp AI</h1>
+  <p>Đặt điện thoại nằm ngang giữa 2 người. Mỗi người chọn ngôn ngữ của mình rồi bấm micro để nói.</p>
+  <ol>
+    <li>Chọn ngôn ngữ ở mỗi bên màn hình</li>
+    <li>Bấm micro, nói bình thường</li>
+    <li>App tự dịch và đọc to cho người kia nghe</li>
+  </ol>
+  <button id="introStart">Bắt đầu</button>
+</div>
+
+<div class="app">
+  <div class="panel top" id="panelTop">
+    <div class="panel-inner">
+      <select class="lang-select" id="langTop"></select>
+      <div class="transcript-wrap" id="transcriptTop">
+        <div class="placeholder">Nhấn micro để bắt đầu nói…</div>
+      </div>
+      <div class="mic-row">
+        <button class="mic-btn" id="micTop" aria-label="Nói">🎤</button>
+        <button class="keyboard-btn" id="kbTop" aria-label="Gõ chữ" title="Gõ chữ thay vì nói">⌨</button>
+      </div>
+      <form class="type-row" id="typeRowTop">
+        <input type="text" id="typeInputTop" placeholder="Gõ câu cần dịch…" autocomplete="off" />
+        <button type="submit">Dịch</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="center-bar">
+    <span class="brand-mini">PHIÊN DỊCH TRỰC TIẾP</span>
+    <button class="swap-btn" id="swapBtn" title="Đổi vị trí ngôn ngữ">⇅</button>
+    <span class="status-text" id="statusText">Sẵn sàng</span>
+    <button class="install-btn" id="installBtn">⬇ Cài đặt app</button>
+  </div>
+
+  <div class="panel bottom" id="panelBottom">
+    <div class="panel-inner">
+      <select class="lang-select" id="langBottom"></select>
+      <div class="transcript-wrap" id="transcriptBottom">
+        <div class="placeholder">Nhấn micro để bắt đầu nói…</div>
+      </div>
+      <div class="mic-row">
+        <button class="mic-btn" id="micBottom" aria-label="Nói">🎤</button>
+        <button class="keyboard-btn" id="kbBottom" aria-label="Gõ chữ" title="Gõ chữ thay vì nói">⌨</button>
+      </div>
+      <form class="type-row" id="typeRowBottom">
+        <input type="text" id="typeInputBottom" placeholder="Gõ câu cần dịch…" autocomplete="off" />
+        <button type="submit">Dịch</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="spinner"></div>
+  <div class="title">Đang tải AI dịch…</div>
+  <div class="msg" id="overlayMsg">Chỉ tải một lần đầu tiên. Sau đó ứng dụng dịch hoàn toàn ngoại tuyến, riêng tư, không gửi dữ liệu lên máy chủ nào.</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  // Phiên dịch trực tiếp: nhận diện giọng nói bằng Web Speech API (trình duyệt),
+  // dịch bằng AI chạy thẳng trong trình duyệt (WebLLM + WebGPU) — không server, không API key.
+  // Đây là app riêng, độc lập với AIHub/Hợp Tác — không dùng chung thương hiệu, dữ liệu hay code.
+  // Đóng gói dưới dạng PWA (manifest + service worker riêng trong /dich/) để cài được như app thật,
+  // và deploy tự động khi push lên Vercel (static site, không cần cấu hình thêm).
+
+  const LANGUAGES = [
+    { code: 'vi-VN', label: 'Tiếng Việt', name: 'tiếng Việt' },
+    { code: 'en-US', label: 'Tiếng Anh', name: 'tiếng Anh' },
+    { code: 'zh-CN', label: 'Tiếng Trung', name: 'tiếng Trung (giản thể)' },
+    { code: 'ja-JP', label: 'Tiếng Nhật', name: 'tiếng Nhật' },
+    { code: 'ko-KR', label: 'Tiếng Hàn', name: 'tiếng Hàn' },
+    { code: 'fr-FR', label: 'Tiếng Pháp', name: 'tiếng Pháp' },
+    { code: 'de-DE', label: 'Tiếng Đức', name: 'tiếng Đức' },
+    { code: 'es-ES', label: 'Tiếng Tây Ban Nha', name: 'tiếng Tây Ban Nha' },
+    { code: 'ru-RU', label: 'Tiếng Nga', name: 'tiếng Nga' },
+    { code: 'th-TH', label: 'Tiếng Thái', name: 'tiếng Thái' },
+    { code: 'id-ID', label: 'Tiếng Indonesia', name: 'tiếng Indonesia' },
+    { code: 'hi-IN', label: 'Tiếng Hindi', name: 'tiếng Hindi (Ấn Độ)' },
+    { code: 'ar-SA', label: 'Tiếng Ả Rập', name: 'tiếng Ả Rập' },
+    { code: 'pt-PT', label: 'Tiếng Bồ Đào Nha', name: 'tiếng Bồ Đào Nha' },
+    { code: 'it-IT', label: 'Tiếng Ý', name: 'tiếng Ý' }
+  ];
+  const LANG_BY_CODE = Object.fromEntries(LANGUAGES.map(l => [l.code, l]));
+  const MODEL_ID = "Qwen2.5-1.5B-Instruct-q4f16_1-MLC";
+
+  const els = {
+    langTop: document.getElementById('langTop'),
+    langBottom: document.getElementById('langBottom'),
+    micTop: document.getElementById('micTop'),
+    micBottom: document.getElementById('micBottom'),
+    kbTop: document.getElementById('kbTop'),
+    kbBottom: document.getElementById('kbBottom'),
+    typeRowTop: document.getElementById('typeRowTop'),
+    typeRowBottom: document.getElementById('typeRowBottom'),
+    typeInputTop: document.getElementById('typeInputTop'),
+    typeInputBottom: document.getElementById('typeInputBottom'),
+    transcriptTop: document.getElementById('transcriptTop'),
+    transcriptBottom: document.getElementById('transcriptBottom'),
+    swapBtn: document.getElementById('swapBtn'),
+    statusText: document.getElementById('statusText'),
+    overlay: document.getElementById('overlay'),
+    overlayMsg: document.getElementById('overlayMsg'),
+    toast: document.getElementById('toast'),
+    intro: document.getElementById('intro'),
+    introStart: document.getElementById('introStart'),
+    installBtn: document.getElementById('installBtn')
+  };
+
+  LANGUAGES.forEach(l => {
+    const o1 = document.createElement('option'); o1.value = l.code; o1.textContent = l.label;
+    const o2 = o1.cloneNode(true);
+    els.langTop.appendChild(o1);
+    els.langBottom.appendChild(o2);
+  });
+
+  // Nhớ ngôn ngữ đã chọn lần trước, để lần sau mở app không phải chọn lại.
+  let savedLangs = null;
+  try{ savedLangs = JSON.parse(localStorage.getItem('dich_langs') || 'null'); }catch(e){}
+  els.langTop.value = (savedLangs && LANG_BY_CODE[savedLangs.top]) ? savedLangs.top : 'vi-VN';
+  els.langBottom.value = (savedLangs && LANG_BY_CODE[savedLangs.bottom]) ? savedLangs.bottom : 'en-US';
+
+  function saveLangs(){
+    try{ localStorage.setItem('dich_langs', JSON.stringify({ top: els.langTop.value, bottom: els.langBottom.value })); }catch(e){}
+  }
+  els.langTop.addEventListener('change', saveLangs);
+  els.langBottom.addEventListener('change', saveLangs);
+
+  // ---------- Màn hình hướng dẫn lần đầu ----------
+  const INTRO_KEY = 'dich_intro_seen';
+  try{
+    if(localStorage.getItem(INTRO_KEY)) els.intro.remove();
+  }catch(e){ els.intro.remove(); }
+  els.introStart.addEventListener('click', () => {
+    try{ localStorage.setItem(INTRO_KEY, '1'); }catch(e){}
+    els.intro.remove();
+  });
+
+  function showToast(msg, ms){
+    els.toast.textContent = msg;
+    els.toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => els.toast.classList.remove('show'), ms || 2600);
+  }
+  function setStatus(msg){ els.statusText.textContent = msg; }
+
+  // ---------- Nhận diện giọng nói ----------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const speechSupported = !!SR;
+  if(!speechSupported){
+    setStatus('Trình duyệt này chưa hỗ trợ micro, dùng gõ chữ nhé');
+    [els.micTop, els.micBottom].forEach(b => { b.disabled = true; b.textContent = '⛔'; });
+    [els.typeRowTop, els.typeRowBottom].forEach(r => r.classList.add('show'));
+    showToast('Trình duyệt này chưa hỗ trợ micro (vd Safari) — bạn gõ chữ vào ô bên dưới để dịch nhé.', 5000);
+  }
+
+  function supportsWebGPU(){
+    return typeof navigator !== 'undefined' && !!navigator.gpu;
+  }
+
+  // ---------- AI dịch (WebLLM, chạy trong trình duyệt) ----------
+  let engine = null, engineLoading = null;
+
+  async function ensureEngine(){
+    if(engine) return engine;
+    if(engineLoading) return engineLoading;
+    els.overlay.classList.add('show');
+    const webllm = await import("https://esm.run/@mlc-ai/web-llm");
+    engineLoading = webllm.CreateMLCEngine(MODEL_ID, {
+      initProgressCallback: p => { els.overlayMsg.textContent = p.text || 'Đang tải AI dịch...'; }
+    }).then(e => {
+      engine = e;
+      els.overlay.classList.remove('show');
+      return e;
+    }).catch(err => {
+      els.overlay.classList.remove('show');
+      engineLoading = null;
+      throw err;
+    });
+    return engineLoading;
+  }
+
+  async function translateText(text, fromLang, toLang){
+    const eng = await ensureEngine();
+    const reply = await eng.chat.completions.create({
+      messages: [
+        { role: 'system', content: 'Bạn là công cụ phiên dịch. Chỉ xuất ra đúng bản dịch, không thêm giải thích, không thêm dấu ngoặc kép, không lặp lại câu gốc.' },
+        { role: 'user', content: `Dịch câu sau từ ${fromLang.name} sang ${toLang.name}, giữ đúng ý và tự nhiên như người bản xứ nói chuyện:\n\n${text}` }
+      ],
+      temperature: 0.2,
+      max_tokens: 300
+    });
+    return (reply.choices?.[0]?.message?.content || '').trim();
+  }
+
+  // ---------- Đọc to bản dịch (giọng chuẩn của trình duyệt) ----------
+  let voices = [];
+  function loadVoices(){ voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : []; }
+  loadVoices();
+  if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged = loadVoices;
+
+  function pickVoice(langCode){
+    if(!voices.length) return null;
+    const base = langCode.split('-')[0];
+    return voices.find(v => v.lang === langCode) ||
+           voices.find(v => v.lang.toLowerCase().startsWith(base) && /google/i.test(v.name)) ||
+           voices.find(v => v.lang.toLowerCase().startsWith(base)) ||
+           null;
+  }
+
+  function speak(text, langCode){
+    if(!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = langCode;
+    const v = pickVoice(langCode);
+    if(v) u.voice = v;
+    u.rate = 1;
+    window.speechSynthesis.speak(u);
+  }
+
+  const MIC_ERROR_MESSAGES = {
+    'not-allowed': 'Micro bị chặn. Vào cài đặt trình duyệt, cấp quyền Micro cho trang này rồi thử lại — hoặc dùng nút ⌨ để gõ chữ.',
+    'permission-denied': 'Micro bị chặn. Vào cài đặt trình duyệt, cấp quyền Micro cho trang này rồi thử lại — hoặc dùng nút ⌨ để gõ chữ.',
+    'audio-capture': 'Không tìm thấy micro trên thiết bị này. Dùng nút ⌨ để gõ chữ thay thế.',
+    'network': 'Mất kết nối mạng khi nhận diện giọng nói, vui lòng thử lại.'
+  };
+
+  // ---------- Điều khiển từng bên (trên / dưới) ----------
+  function createSide(opts){
+    const { micEl, kbEl, typeRowEl, typeInputEl, transcriptEl, langSelectEl, otherLangSelectEl, otherTranscriptEl } = opts;
+    const state = { recognizing: false, recognizer: null };
+
+    function renderLine(container, origText, transText){
+      container.innerHTML = '';
+      const line = document.createElement('div');
+      line.className = 'transcript-line';
+      if(origText){
+        const o = document.createElement('div');
+        o.className = 'orig';
+        o.textContent = origText;
+        line.appendChild(o);
+      }
+      if(transText){
+        const t = document.createElement('div');
+        t.className = 'trans replayable';
+        t.textContent = transText;
+        t.title = 'Chạm để nghe lại';
+        t.addEventListener('click', () => speak(transText, otherLangSelectEl.value));
+        line.appendChild(t);
+      }
+      container.appendChild(line);
+    }
+
+    function setMicState(cls){
+      micEl.classList.remove('listening', 'busy');
+      if(cls) micEl.classList.add(cls);
+    }
+
+    async function handleFinalText(text){
+      if(!text.trim()) { setMicState(''); setStatus('Sẵn sàng'); return; }
+      const fromLang = LANG_BY_CODE[langSelectEl.value];
+      const toLang = LANG_BY_CODE[otherLangSelectEl.value];
+      renderLine(transcriptEl, text, null);
+      setMicState('busy');
+      setStatus('Đang dịch…');
+      try{
+        const translated = await translateText(text, fromLang, toLang);
+        renderLine(transcriptEl, text, null);
+        renderLine(otherTranscriptEl, null, translated);
+        setStatus('Sẵn sàng');
+        speak(translated, toLang.code);
+      }catch(err){
+        console.error(err);
+        setStatus('Lỗi khi dịch');
+        showToast(supportsWebGPU() ? 'Không dịch được, vui lòng thử lại.' : 'Thiết bị/trình duyệt này chưa hỗ trợ AI dịch (cần WebGPU, ví dụ Chrome mới nhất).', 4000);
+      }finally{
+        setMicState('');
+      }
+    }
+
+    function start(){
+      if(!speechSupported) return;
+      if(state.recognizing){ state.recognizer.stop(); return; }
+      const rec = new SR();
+      rec.lang = langSelectEl.value;
+      rec.interimResults = true;
+      rec.continuous = false;
+      rec.maxAlternatives = 1;
+      state.recognizer = rec;
+      state.recognizing = true;
+      setMicState('listening');
+      setStatus('Đang nghe…');
+
+      rec.onresult = (e) => {
+        let interim = '';
+        for(let i = e.resultIndex; i < e.results.length; i++){
+          interim += e.results[i][0].transcript;
+        }
+        if(interim) renderLine(transcriptEl, interim, null);
+      };
+      rec.onerror = (e) => {
+        console.error('speech error', e.error);
+        if(e.error === 'no-speech' || e.error === 'aborted') return;
+        showToast(MIC_ERROR_MESSAGES[e.error] || 'Không nghe rõ, vui lòng thử lại hoặc dùng nút ⌨ để gõ chữ.', 4000);
+      };
+      rec.onend = () => {
+        state.recognizing = false;
+        const lastText = transcriptEl.querySelector('.orig')?.textContent || '';
+        handleFinalText(lastText);
+      };
+      try{ rec.start(); }
+      catch(err){ console.error(err); state.recognizing = false; setMicState(''); }
+    }
+
+    micEl.addEventListener('click', start);
+
+    // Gõ chữ dự phòng — dùng khi không tiện nói (chỗ ồn) hoặc trình duyệt không hỗ trợ micro.
+    kbEl.addEventListener('click', () => {
+      typeRowEl.classList.toggle('show');
+      if(typeRowEl.classList.contains('show')) typeInputEl.focus();
+    });
+    typeRowEl.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = typeInputEl.value.trim();
+      if(!text) return;
+      typeInputEl.value = '';
+      handleFinalText(text);
+    });
+  }
+
+  createSide({
+    micEl: els.micTop, kbEl: els.kbTop, typeRowEl: els.typeRowTop, typeInputEl: els.typeInputTop,
+    transcriptEl: els.transcriptTop, langSelectEl: els.langTop, otherLangSelectEl: els.langBottom, otherTranscriptEl: els.transcriptBottom
+  });
+  createSide({
+    micEl: els.micBottom, kbEl: els.kbBottom, typeRowEl: els.typeRowBottom, typeInputEl: els.typeInputBottom,
+    transcriptEl: els.transcriptBottom, langSelectEl: els.langBottom, otherLangSelectEl: els.langTop, otherTranscriptEl: els.transcriptTop
+  });
+
+  els.swapBtn.addEventListener('click', () => {
+    const a = els.langTop.value, b = els.langBottom.value;
+    els.langTop.value = b; els.langBottom.value = a;
+    saveLangs();
+  });
+
+  if(!supportsWebGPU()){
+    setStatus('Thiết bị chưa hỗ trợ AI dịch (cần WebGPU)');
+  }
+
+  // ---------- Cài đặt như app thật (PWA) ----------
+  let deferredInstallPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    els.installBtn.classList.add('show');
+  });
+  els.installBtn.addEventListener('click', async () => {
+    if(!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    els.installBtn.classList.remove('show');
+  });
+  window.addEventListener('appinstalled', () => {
+    els.installBtn.classList.remove('show');
+    showToast('Đã cài đặt app thành công!', 2500);
+  });
+
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if(isIOS && !isStandalone){
+    setTimeout(() => showToast('Mẹo: bấm biểu tượng Chia sẻ → "Thêm vào MH chính" để cài app này.', 5000), 1200);
+  }
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+</script>
+
+</body>
+</html>
