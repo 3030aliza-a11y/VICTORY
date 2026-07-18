@@ -1,6 +1,6 @@
 // Service worker riêng cho app Phiên Dịch Trực Tiếp (/dich/), scope chỉ trong thư mục này —
 // không đụng tới AIHub, Hợp Tác hay bất kỳ trang nào khác trong site.
-const CACHE_NAME = 'dich-shell-v2';
+const CACHE_NAME = 'dich-shell-v3';
 const SHELL_FILES = [
   './',
   './index.html',

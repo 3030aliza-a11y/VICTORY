@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>Phiên Dịch Trực Tiếp AI — Dịch hội thoại 2 chiều tức thì</title>
-<meta name="description" content="Ứng dụng phiên dịch trực tiếp bằng giọng nói, dịch tự nhiên hai chiều theo thời gian thực, chạy hoàn toàn trong trình duyệt bằng AI, không cần server hay API key." />
+<meta name="description" content="Ứng dụng phiên dịch trực tiếp bằng giọng nói, dịch tự nhiên hai chiều, phản hồi nhanh, nhẹ máy, dễ dùng." />
 
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#12183a" />
@@ -33,7 +33,7 @@
   .panel.top{background:var(--top-bg);color:var(--top-ink);}
   .panel.bottom{background:var(--bottom-bg);color:var(--bottom-ink);}
   .panel-inner{width:100%;max-width:480px;padding:18px 22px;display:flex;flex-direction:column;align-items:center;gap:14px;height:100%;justify-content:center;}
-  .panel.top .panel-inner{transform:rotate(180deg);}
+  .app.face-to-face .panel.top .panel-inner{transform:rotate(180deg);}
 
   .lang-select{appearance:none;-webkit-appearance:none;border:none;border-radius:999px;padding:9px 34px 9px 16px;font-size:14px;font-weight:700;cursor:pointer;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
@@ -66,6 +66,8 @@
   .center-bar{flex:none;height:56px;display:flex;align-items:center;justify-content:center;gap:10px;
     background:#fff;border-top:1px solid #e6e8f0;border-bottom:1px solid #e6e8f0;position:relative;z-index:5;padding:0 10px;}
   .swap-btn{width:38px;height:38px;border-radius:50%;border:none;background:#eef1fb;color:#3b7dff;font-size:18px;cursor:pointer;flex:none;}
+  .face-btn{width:38px;height:38px;border-radius:50%;border:none;background:#eef1fb;color:#3b7dff;font-size:15px;cursor:pointer;flex:none;}
+  .face-btn.active{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;}
   .status-text{font-size:12.5px;color:#8890b3;max-width:36%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .brand-mini{position:absolute;left:14px;font-size:12px;font-weight:800;color:#b7bde0;letter-spacing:.5px;display:none;}
   @media (min-width:520px){.brand-mini{display:block;}}
@@ -88,14 +90,6 @@
   .trans.replayable{cursor:pointer;}
   .trans.replayable::after{content:' 🔊';font-size:.75em;opacity:.6;}
 
-  .overlay{position:fixed;inset:0;background:rgba(6,10,24,.92);color:#fff;display:none;
-    align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:50;text-align:center;padding:24px;}
-  .overlay.show{display:flex;}
-  .overlay .spinner{width:38px;height:38px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#5aa7ff;animation:spin 1s linear infinite;}
-  @keyframes spin{to{transform:rotate(360deg);}}
-  .overlay .msg{font-size:14px;color:#cdd6ff;max-width:320px;}
-  .overlay .title{font-size:17px;font-weight:800;}
-
   .toast{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);background:#1b2350;color:#fff;
     padding:10px 18px;border-radius:999px;font-size:13px;z-index:60;opacity:0;transition:opacity .3s;pointer-events:none;max-width:88vw;text-align:center;}
   .toast.show{opacity:1;}
@@ -115,16 +109,16 @@
 <div class="intro" id="intro">
   <img src="../img/dich-icon-192.png" alt="Phiên Dịch Trực Tiếp AI" />
   <h1>Phiên Dịch Trực Tiếp AI</h1>
-  <p>Đặt điện thoại nằm ngang giữa 2 người. Mỗi người chọn ngôn ngữ của mình rồi bấm micro để nói.</p>
+  <p>Dịch nhanh, gọn — nói hoặc gõ một câu là ra bản dịch ngay.</p>
   <ol>
     <li>Chọn ngôn ngữ ở mỗi bên màn hình</li>
-    <li>Bấm micro, nói bình thường</li>
-    <li>App tự dịch và đọc to cho người kia nghe</li>
+    <li>Bấm micro, nói bình thường (hoặc bấm ⌨ để gõ chữ)</li>
+    <li>App dịch và đọc to cho người kia nghe</li>
   </ol>
   <button id="introStart">Bắt đầu</button>
 </div>
 
-<div class="app">
+<div class="app" id="app">
   <div class="panel top" id="panelTop">
     <div class="panel-inner">
       <select class="lang-select" id="langTop"></select>
@@ -145,6 +139,7 @@
   <div class="center-bar">
     <span class="brand-mini">PHIÊN DỊCH TRỰC TIẾP</span>
     <button class="swap-btn" id="swapBtn" title="Đổi vị trí ngôn ngữ">⇅</button>
+    <button class="face-btn" id="faceBtn" title="Chế độ 2 người ngồi đối diện (lật chữ phía trên)">🤝</button>
     <span class="status-text" id="statusText">Sẵn sàng</span>
     <button class="install-btn" id="installBtn">⬇ Cài đặt app</button>
   </div>
@@ -167,40 +162,34 @@
   </div>
 </div>
 
-<div class="overlay" id="overlay">
-  <div class="spinner"></div>
-  <div class="title">Đang tải AI dịch…</div>
-  <div class="msg" id="overlayMsg">Chỉ tải một lần đầu tiên. Sau đó ứng dụng dịch hoàn toàn ngoại tuyến, riêng tư, không gửi dữ liệu lên máy chủ nào.</div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script type="module">
   // Phiên dịch trực tiếp: nhận diện giọng nói bằng Web Speech API (trình duyệt),
-  // dịch bằng AI chạy thẳng trong trình duyệt (WebLLM + WebGPU) — không server, không API key.
+  // dịch qua API dịch miễn phí, nhẹ, phản hồi nhanh (không cần tải/chạy AI nặng trên máy —
+  // bản trước dùng WebLLM chạy AI ngay trên máy bị chậm/đơ trên máy yếu, đã bỏ để ưu tiên tốc độ).
   // Đây là app riêng, độc lập với AIHub/Hợp Tác — không dùng chung thương hiệu, dữ liệu hay code.
   // Đóng gói dưới dạng PWA (manifest + service worker riêng trong /dich/) để cài được như app thật,
   // và deploy tự động khi push lên Vercel (static site, không cần cấu hình thêm).
 
   const LANGUAGES = [
-    { code: 'vi-VN', label: 'Tiếng Việt', name: 'tiếng Việt' },
-    { code: 'en-US', label: 'Tiếng Anh', name: 'tiếng Anh' },
-    { code: 'zh-CN', label: 'Tiếng Trung', name: 'tiếng Trung (giản thể)' },
-    { code: 'ja-JP', label: 'Tiếng Nhật', name: 'tiếng Nhật' },
-    { code: 'ko-KR', label: 'Tiếng Hàn', name: 'tiếng Hàn' },
-    { code: 'fr-FR', label: 'Tiếng Pháp', name: 'tiếng Pháp' },
-    { code: 'de-DE', label: 'Tiếng Đức', name: 'tiếng Đức' },
-    { code: 'es-ES', label: 'Tiếng Tây Ban Nha', name: 'tiếng Tây Ban Nha' },
-    { code: 'ru-RU', label: 'Tiếng Nga', name: 'tiếng Nga' },
-    { code: 'th-TH', label: 'Tiếng Thái', name: 'tiếng Thái' },
-    { code: 'id-ID', label: 'Tiếng Indonesia', name: 'tiếng Indonesia' },
-    { code: 'hi-IN', label: 'Tiếng Hindi', name: 'tiếng Hindi (Ấn Độ)' },
-    { code: 'ar-SA', label: 'Tiếng Ả Rập', name: 'tiếng Ả Rập' },
-    { code: 'pt-PT', label: 'Tiếng Bồ Đào Nha', name: 'tiếng Bồ Đào Nha' },
-    { code: 'it-IT', label: 'Tiếng Ý', name: 'tiếng Ý' }
+    { code: 'vi-VN', label: 'Tiếng Việt', mm: 'vi' },
+    { code: 'en-US', label: 'Tiếng Anh', mm: 'en' },
+    { code: 'zh-CN', label: 'Tiếng Trung', mm: 'zh-CN' },
+    { code: 'ja-JP', label: 'Tiếng Nhật', mm: 'ja' },
+    { code: 'ko-KR', label: 'Tiếng Hàn', mm: 'ko' },
+    { code: 'fr-FR', label: 'Tiếng Pháp', mm: 'fr' },
+    { code: 'de-DE', label: 'Tiếng Đức', mm: 'de' },
+    { code: 'es-ES', label: 'Tiếng Tây Ban Nha', mm: 'es' },
+    { code: 'ru-RU', label: 'Tiếng Nga', mm: 'ru' },
+    { code: 'th-TH', label: 'Tiếng Thái', mm: 'th' },
+    { code: 'id-ID', label: 'Tiếng Indonesia', mm: 'id' },
+    { code: 'hi-IN', label: 'Tiếng Hindi', mm: 'hi' },
+    { code: 'ar-SA', label: 'Tiếng Ả Rập', mm: 'ar' },
+    { code: 'pt-PT', label: 'Tiếng Bồ Đào Nha', mm: 'pt' },
+    { code: 'it-IT', label: 'Tiếng Ý', mm: 'it' }
   ];
   const LANG_BY_CODE = Object.fromEntries(LANGUAGES.map(l => [l.code, l]));
-  const MODEL_ID = "Qwen2.5-1.5B-Instruct-q4f16_1-MLC";
 
   const els = {
     langTop: document.getElementById('langTop'),
@@ -216,9 +205,9 @@
     transcriptTop: document.getElementById('transcriptTop'),
     transcriptBottom: document.getElementById('transcriptBottom'),
     swapBtn: document.getElementById('swapBtn'),
+    faceBtn: document.getElementById('faceBtn'),
+    app: document.getElementById('app'),
     statusText: document.getElementById('statusText'),
-    overlay: document.getElementById('overlay'),
-    overlayMsg: document.getElementById('overlayMsg'),
     toast: document.getElementById('toast'),
     intro: document.getElementById('intro'),
     introStart: document.getElementById('introStart'),
@@ -272,43 +261,16 @@
     showToast('Trình duyệt này chưa hỗ trợ micro (vd Safari) — bạn gõ chữ vào ô bên dưới để dịch nhé.', 5000);
   }
 
-  function supportsWebGPU(){
-    return typeof navigator !== 'undefined' && !!navigator.gpu;
-  }
-
-  // ---------- AI dịch (WebLLM, chạy trong trình duyệt) ----------
-  let engine = null, engineLoading = null;
-
-  async function ensureEngine(){
-    if(engine) return engine;
-    if(engineLoading) return engineLoading;
-    els.overlay.classList.add('show');
-    const webllm = await import("https://esm.run/@mlc-ai/web-llm");
-    engineLoading = webllm.CreateMLCEngine(MODEL_ID, {
-      initProgressCallback: p => { els.overlayMsg.textContent = p.text || 'Đang tải AI dịch...'; }
-    }).then(e => {
-      engine = e;
-      els.overlay.classList.remove('show');
-      return e;
-    }).catch(err => {
-      els.overlay.classList.remove('show');
-      engineLoading = null;
-      throw err;
-    });
-    return engineLoading;
-  }
-
+  // ---------- Dịch nhanh qua API miễn phí (không cần AI/GPU trên máy) ----------
   async function translateText(text, fromLang, toLang){
-    const eng = await ensureEngine();
-    const reply = await eng.chat.completions.create({
-      messages: [
-        { role: 'system', content: 'Bạn là công cụ phiên dịch. Chỉ xuất ra đúng bản dịch, không thêm giải thích, không thêm dấu ngoặc kép, không lặp lại câu gốc.' },
-        { role: 'user', content: `Dịch câu sau từ ${fromLang.name} sang ${toLang.name}, giữ đúng ý và tự nhiên như người bản xứ nói chuyện:\n\n${text}` }
-      ],
-      temperature: 0.2,
-      max_tokens: 300
-    });
-    return (reply.choices?.[0]?.message?.content || '').trim();
+    if(fromLang.mm === toLang.mm) return text;
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${fromLang.mm}|${toLang.mm}`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('translate api http ' + res.status);
+    const data = await res.json();
+    const translated = data && data.responseData && data.responseData.translatedText;
+    if(!translated || /MYMEMORY WARNING/i.test(translated)) throw new Error('translate failed: ' + translated);
+    return translated.trim();
   }
 
   // ---------- Đọc to bản dịch (giọng chuẩn của trình duyệt) ----------
@@ -391,7 +353,7 @@
       }catch(err){
         console.error(err);
         setStatus('Lỗi khi dịch');
-        showToast(supportsWebGPU() ? 'Không dịch được, vui lòng thử lại.' : 'Thiết bị/trình duyệt này chưa hỗ trợ AI dịch (cần WebGPU, ví dụ Chrome mới nhất).', 4000);
+        showToast('Không dịch được, kiểm tra kết nối mạng rồi thử lại.', 3500);
       }finally{
         setMicState('');
       }
@@ -462,9 +424,21 @@
     saveLangs();
   });
 
-  if(!supportsWebGPU()){
-    setStatus('Thiết bị chưa hỗ trợ AI dịch (cần WebGPU)');
+  // ---------- Chế độ 2 người ngồi đối diện (lật chữ phía trên) — tắt mặc định cho dễ dùng 1 mình ----------
+  const FACE_KEY = 'dich_face_to_face';
+  let faceMode = false;
+  try{ faceMode = localStorage.getItem(FACE_KEY) === '1'; }catch(e){}
+  function applyFaceMode(){
+    els.app.classList.toggle('face-to-face', faceMode);
+    els.faceBtn.classList.toggle('active', faceMode);
   }
+  applyFaceMode();
+  els.faceBtn.addEventListener('click', () => {
+    faceMode = !faceMode;
+    applyFaceMode();
+    try{ localStorage.setItem(FACE_KEY, faceMode ? '1' : '0'); }catch(e){}
+    showToast(faceMode ? 'Đã bật chế độ 2 người đối diện (chữ trên bị lật để người đối diện đọc thuận)' : 'Đã tắt chế độ đối diện, chữ hiển thị xuôi bình thường', 3000);
+  });
 
   // ---------- Cài đặt như app thật (PWA) ----------
   let deferredInstallPrompt = null;
