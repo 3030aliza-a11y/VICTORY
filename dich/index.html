@@ -112,7 +112,7 @@
   <p>Dịch nhanh, gọn — nói hoặc gõ một câu là ra bản dịch ngay.</p>
   <ol>
     <li>Chọn ngôn ngữ ở mỗi bên màn hình</li>
-    <li>Bấm micro, nói bình thường (hoặc bấm ⌨ để gõ chữ)</li>
+    <li id="introStep2">Bấm micro, nói bình thường (hoặc bấm ⌨ để gõ chữ)</li>
     <li>App dịch và đọc to cho người kia nghe</li>
   </ol>
   <button id="introStart">Bắt đầu</button>
@@ -233,8 +233,14 @@
   els.langTop.addEventListener('change', saveLangs);
   els.langBottom.addEventListener('change', saveLangs);
 
+  const isIOSDevice = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
   // ---------- Màn hình hướng dẫn lần đầu ----------
   const INTRO_KEY = 'dich_intro_seen';
+  if(isIOSDevice){
+    const step2 = document.getElementById('introStep2');
+    if(step2) step2.textContent = 'Bấm ⌨, rồi dùng micro trên bàn phím iPhone để đọc thành chữ';
+  }
   try{
     if(localStorage.getItem(INTRO_KEY)) els.intro.remove();
   }catch(e){ els.intro.remove(); }
@@ -255,10 +261,16 @@
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const speechSupported = !!SR;
   if(!speechSupported){
-    setStatus('Trình duyệt này chưa hỗ trợ micro, dùng gõ chữ nhé');
     [els.micTop, els.micBottom].forEach(b => { b.disabled = true; b.textContent = '⛔'; });
     [els.typeRowTop, els.typeRowBottom].forEach(r => r.classList.add('show'));
-    showToast('Trình duyệt này chưa hỗ trợ micro (vd Safari) — bạn gõ chữ vào ô bên dưới để dịch nhé.', 5000);
+    if(isIOSDevice){
+      setStatus('iPhone: dùng micro trên bàn phím để nói');
+      [els.typeInputTop, els.typeInputBottom].forEach(i => { i.placeholder = 'Bấm vào đây, rồi bấm 🎤 trên bàn phím để nói…'; });
+      showToast('iPhone không hỗ trợ micro của app. Bấm vào ô chữ bên dưới, rồi dùng nút 🎤 ngay trên bàn phím iPhone để đọc — rất nhanh và chính xác.', 6000);
+    }else{
+      setStatus('Trình duyệt này chưa hỗ trợ micro, dùng gõ chữ nhé');
+      showToast('Trình duyệt này chưa hỗ trợ micro — bạn gõ chữ vào ô bên dưới để dịch nhé.', 5000);
+    }
   }
 
   // ---------- Dịch nhanh qua API miễn phí (không cần AI/GPU trên máy) ----------
@@ -460,9 +472,8 @@
   });
 
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  if(isIOS && !isStandalone){
-    setTimeout(() => showToast('Mẹo: bấm biểu tượng Chia sẻ → "Thêm vào MH chính" để cài app này.', 5000), 1200);
+  if(isIOSDevice && !isStandalone){
+    setTimeout(() => showToast('Mẹo: bấm biểu tượng Chia sẻ → "Thêm vào MH chính" để cài app này.', 5000), speechSupported ? 1200 : 7200);
   }
 
   if('serviceWorker' in navigator){
