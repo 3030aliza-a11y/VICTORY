@@ -3,7 +3,8 @@ const UI = (() => {
   const app = () => document.getElementById('app');
   const modalRoot = () => document.getElementById('modalRoot');
 
-  let filters = { search: '', groupId: '', capability: '' };
+  let filters = { search: '', groupId: '', capability: '', businessType: '' };
+  const CORE_BUSINESS_TYPES = ['san_xuat', 'thuong_mai', 'dich_vu'];
   let editingCompanyId = null;
   let activeTab = 'company';
 
@@ -206,6 +207,11 @@ const UI = (() => {
     let list = state.companies.slice();
 
     if (filters.groupId) list = list.filter(c => c.groupId === filters.groupId);
+    if (filters.capability) list = list.filter(c => (c.capabilities || []).includes(filters.capability));
+    if (filters.businessType) {
+      if (filters.businessType === 'khac') list = list.filter(c => !(c.businessTypes || []).some(t => CORE_BUSINESS_TYPES.includes(t)));
+      else list = list.filter(c => (c.businessTypes || []).includes(filters.businessType));
+    }
     if (filters.search) {
       const q = filters.search.toLowerCase();
       list = list.filter(c =>
@@ -223,11 +229,23 @@ const UI = (() => {
 
       <div class="toolbar">
         <input id="searchInput" type="text" placeholder="Tìm theo tên, mã ĐV, SĐT, người đại diện..." value="${escapeHtml(filters.search)}" />
-        <select id="groupFilter">
+        <select id="groupFilter" title="Phân loại theo nhóm (tên hiệp hội)">
           <option value="">Tất cả nhóm</option>
           ${state.groups.map(g => `<option value="${g.id}" ${filters.groupId === g.id ? 'selected' : ''}>${escapeHtml(g.name)}</option>`).join('')}
         </select>
+        <select id="capabilityFilter" title="Phân loại theo lĩnh vực hoạt động">
+          <option value="">Tất cả lĩnh vực</option>
+          ${Storage.CAPABILITIES.map(cap => `<option value="${cap.key}" ${filters.capability === cap.key ? 'selected' : ''}>${escapeHtml(cap.label)}</option>`).join('')}
+        </select>
+        <select id="businessTypeFilter" title="Phân loại theo mô hình hoạt động">
+          <option value="">Tất cả mô hình</option>
+          <option value="san_xuat" ${filters.businessType === 'san_xuat' ? 'selected' : ''}>Sản xuất</option>
+          <option value="thuong_mai" ${filters.businessType === 'thuong_mai' ? 'selected' : ''}>Thương mại</option>
+          <option value="dich_vu" ${filters.businessType === 'dich_vu' ? 'selected' : ''}>Dịch vụ</option>
+          <option value="khac" ${filters.businessType === 'khac' ? 'selected' : ''}>Khác</option>
+        </select>
         <div class="spacer"></div>
+        <button class="btn-ghost" id="btnExportExcel">Xuất Excel</button>
         <button class="btn-ghost" id="btnExport">Xuất JSON</button>
         <label class="btn-ghost file-label">Nhập JSON<input type="file" id="importFile" accept="application/json" hidden /></label>
         <button class="btn-primary" id="btnAddCompany">+ Thêm doanh nghiệp</button>
@@ -255,9 +273,12 @@ const UI = (() => {
 
     document.getElementById('searchInput').addEventListener('input', e => { filters.search = e.target.value; renderCompanies(); });
     document.getElementById('groupFilter').addEventListener('change', e => { filters.groupId = e.target.value; renderCompanies(); });
+    document.getElementById('capabilityFilter').addEventListener('change', e => { filters.capability = e.target.value; renderCompanies(); });
+    document.getElementById('businessTypeFilter').addEventListener('change', e => { filters.businessType = e.target.value; renderCompanies(); });
     document.getElementById('btnAddCompany').addEventListener('click', () => openCompanyModal(null));
     document.getElementById('btnExport').addEventListener('click', exportJSON);
     document.getElementById('importFile').addEventListener('change', importJSON);
+    document.getElementById('btnExportExcel').addEventListener('click', () => openExportModal(list, state.groups));
 
     document.querySelectorAll('[data-view]').forEach(el => el.addEventListener('click', () => openCompanyModal(el.dataset.view, true)));
     document.querySelectorAll('[data-edit]').forEach(el => el.addEventListener('click', () => openCompanyModal(el.dataset.edit, false)));
@@ -300,6 +321,65 @@ const UI = (() => {
       Storage.deleteCompany(id);
       renderCompanies();
     }
+  }
+
+  // ---------- Customized Excel export ----------
+  let exportSelectedKeys = null;
+
+  function openExportModal(list, groups) {
+    if (!exportSelectedKeys) exportSelectedKeys = ExportXLS.DEFAULT_KEYS.slice();
+    renderExportModal(list, groups);
+  }
+
+  function renderExportModal(list, groups) {
+    modalRoot().innerHTML = `
+      <div class="modal-backdrop">
+        <div class="modal">
+          <div class="modal-head">
+            <h2>Xuất Excel — tùy chỉnh cột</h2>
+            <button class="btn-icon" id="modalClose">✕</button>
+          </div>
+          <div class="modal-body">
+            <p class="empty-hint" style="margin-top:0">Sẽ xuất <b style="color:var(--text)">${list.length}</b> doanh nghiệp đang hiển thị (theo tìm kiếm/nhóm hiện tại). Chọn các cột muốn có trong file:</p>
+            <div class="export-toolbar">
+              <button type="button" class="btn-ghost sm" id="selectAllFields">Chọn tất cả</button>
+              <button type="button" class="btn-ghost sm" id="clearAllFields">Bỏ chọn tất cả</button>
+            </div>
+            ${ExportXLS.FIELD_GROUPS.map(group => `
+              <div class="form-section-title">${group.title}</div>
+              <div class="chip-grid">
+                ${group.fields.map(f => `
+                  <label class="chip">
+                    <input type="checkbox" name="exportField" value="${f.key}" ${exportSelectedKeys.includes(f.key) ? 'checked' : ''} />
+                    ${f.label}
+                  </label>`).join('')}
+              </div>`).join('')}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-ghost" id="modalCancel">Hủy</button>
+            <button type="button" class="btn-primary" id="btnDoExport">Xuất file</button>
+          </div>
+        </div>
+      </div>`;
+
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.getElementById('modalCancel').addEventListener('click', closeModal);
+    document.getElementById('selectAllFields').addEventListener('click', () => {
+      exportSelectedKeys = ExportXLS.ALL_FIELDS.map(f => f.key);
+      renderExportModal(list, groups);
+    });
+    document.getElementById('clearAllFields').addEventListener('click', () => {
+      exportSelectedKeys = [];
+      renderExportModal(list, groups);
+    });
+    document.getElementById('btnDoExport').addEventListener('click', () => {
+      const checked = Array.from(document.querySelectorAll('input[name=exportField]:checked')).map(el => el.value);
+      if (!checked.length) { alert('Vui lòng chọn ít nhất 1 cột để xuất'); return; }
+      exportSelectedKeys = checked;
+      const kind = ExportXLS.download(list, groups, checked, 'danh-sach-hoi-vien');
+      closeModal();
+      toast(kind === 'xlsx' ? 'Đã xuất file Excel' : 'Đã xuất file CSV (thư viện Excel không tải được, dùng bản CSV tương thích Excel)');
+    });
   }
 
   function exportJSON() {
@@ -540,7 +620,11 @@ const UI = (() => {
 
   function feesTab(c) {
     return `
+      <div class="form-section-title">Người phụ trách hội phí / Thư ký</div>
       <div class="form-grid">
+        <label>Họ &amp; tên<input name="membership.contactName" value="${escapeHtml(c.membership.contactName || '')}" /></label>
+        <label>Điện thoại<input name="membership.contactPhone" value="${escapeHtml(c.membership.contactPhone || '')}" /></label>
+        <label class="col-2">Email<input type="email" name="membership.contactEmail" value="${escapeHtml(c.membership.contactEmail || '')}" /></label>
         <label>Ngày vào hội<input type="date" name="membership.joinDate" value="${escapeHtml(c.membership.joinDate)}" /></label>
       </div>
       <div class="form-section-title">Hội phí theo năm</div>
@@ -579,7 +663,10 @@ const UI = (() => {
       c.contacts[i] = contact;
     });
 
-    if (fd.has('membership.joinDate')) c.membership.joinDate = fd.get('membership.joinDate');
+    ['contactName', 'contactPhone', 'contactEmail', 'joinDate'].forEach(f => {
+      const key = `membership.${f}`;
+      if (fd.has(key)) c.membership[f] = fd.get(key);
+    });
     c.membership.fees.forEach((f, i) => {
       if (fd.has(`fees.${i}.year`)) f.year = Number(fd.get(`fees.${i}.year`));
       if (fd.has(`fees.${i}.fee`)) f.fee = Number(fd.get(`fees.${i}.fee`));

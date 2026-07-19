@@ -62,7 +62,7 @@ const Storage = (() => {
   }
 
   function emptyMembership() {
-    return { joinDate: '', fees: [] };
+    return { contactName: '', contactPhone: '', contactEmail: '', joinDate: '', fees: [] };
   }
 
   function emptyCompany(groupId) {
@@ -92,9 +92,9 @@ const Storage = (() => {
 
   function seedState() {
     const groups = [
-      { id: uid('grp'), name: 'Hội viên chính thức', color: GROUP_COLORS[0], createdAt: localISODate(new Date()) },
-      { id: uid('grp'), name: 'Hội viên liên kết', color: GROUP_COLORS[1], createdAt: localISODate(new Date()) },
-      { id: uid('grp'), name: 'Khảo sát ngành cơ khí', color: GROUP_COLORS[2], createdAt: localISODate(new Date()) },
+      { id: uid('grp'), name: 'HAMEE', color: GROUP_COLORS[0], createdAt: localISODate(new Date()) },
+      { id: uid('grp'), name: 'HUBA', color: GROUP_COLORS[1], createdAt: localISODate(new Date()) },
+      { id: uid('grp'), name: 'Sen Vàng', color: GROUP_COLORS[2], createdAt: localISODate(new Date()) },
     ];
 
     const names = [
@@ -180,7 +180,13 @@ const Storage = (() => {
             dob: randomDob(1970 + Math.floor(Math.random() * 25)),
           },
         ],
-        membership: { joinDate: `${joinYear}-06-15`, fees },
+        membership: {
+          contactName: `${rep2First} ${rep2Last}`,
+          contactPhone: `09${Math.floor(10000000 + Math.random() * 89999999)}`,
+          contactEmail: `${rep2Last.toLowerCase()}.thuky@${n.split(' ')[0].toLowerCase()}.vn`,
+          joinDate: `${joinYear}-06-15`,
+          fees,
+        },
         createdAt: localISODate(new Date()),
       };
     });
