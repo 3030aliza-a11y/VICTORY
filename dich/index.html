@@ -321,7 +321,7 @@
   // ---------- Điều khiển từng bên (trên / dưới) ----------
   function createSide(opts){
     const { micEl, kbEl, typeRowEl, typeInputEl, transcriptEl, langSelectEl, otherLangSelectEl, otherTranscriptEl } = opts;
-    const state = { recognizing: false, recognizer: null };
+    const state = { recognizing: false, recognizer: null, seq: 0 };
 
     function renderLine(container, origText, transText){
       container.innerHTML = '';
@@ -353,21 +353,26 @@
       if(!text.trim()) { setMicState(''); setStatus('Sẵn sàng'); return; }
       const fromLang = LANG_BY_CODE[langSelectEl.value];
       const toLang = LANG_BY_CODE[otherLangSelectEl.value];
+      // Đánh số thứ tự để nếu nói liên tiếp nhiều câu nhanh, kết quả dịch về sau (chậm hơn do mạng)
+      // của câu CŨ sẽ không được phép đè lên câu MỚI hơn đã hiển thị.
+      const mySeq = ++state.seq;
       renderLine(transcriptEl, text, null);
       setMicState('busy');
       setStatus('Đang dịch…');
       try{
         const translated = await translateText(text, fromLang, toLang);
+        if(mySeq !== state.seq) return; // đã có câu mới hơn, bỏ kết quả cũ này
         renderLine(transcriptEl, text, null);
         renderLine(otherTranscriptEl, null, translated);
         setStatus('Sẵn sàng');
         speak(translated, toLang.code);
       }catch(err){
+        if(mySeq !== state.seq) return;
         console.error(err);
         setStatus('Lỗi khi dịch');
         showToast('Không dịch được, kiểm tra kết nối mạng rồi thử lại.', 3500);
       }finally{
-        setMicState('');
+        if(mySeq === state.seq) setMicState('');
       }
     }
 
