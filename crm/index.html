@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CRM Hội viên — Metallic Dashboard</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div id="sampleBanner" class="sample-banner">
+  <span>⚠ Đang hiển thị <b>dữ liệu mẫu</b> để bạn xem trước giao diện. Khi sẵn sàng, nhập dữ liệu thật qua nút "Nhập JSON" ở trang Doanh nghiệp.</span>
+  <button id="btnClearSample" class="btn-ghost sm">Xóa dữ liệu mẫu</button>
+</div>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">◆</div>
+      <div class="brand-text">
+        <div class="brand-name">METALIC CRM</div>
+        <div class="brand-sub">Hội viên doanh nghiệp</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="#/dashboard" class="nav-item" data-route="dashboard"><span class="nav-icon">◧</span>Tổng quan</a>
+      <a href="#/companies" class="nav-item" data-route="companies"><span class="nav-icon">▤</span>Doanh nghiệp</a>
+      <a href="#/groups" class="nav-item" data-route="groups"><span class="nav-icon">◫</span>Nhóm dữ liệu</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="foot-hint">Dữ liệu lưu cục bộ trên trình duyệt (localStorage)</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-title">CRM Hội viên</div>
+      <div class="topbar-spacer"></div>
+    </header>
+    <div id="app" class="content"></div>
+  </main>
+</div>
+
+<div id="modalRoot"></div>
+
+<script src="js/storage.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
