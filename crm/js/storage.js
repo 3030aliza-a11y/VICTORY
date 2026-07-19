@@ -223,6 +223,12 @@ const Storage = (() => {
     return state;
   }
 
+  function addCompaniesBulk(companies) {
+    companies.forEach(c => state.companies.unshift({ ...emptyCompany(c.groupId), ...c, id: uid('cty'), createdAt: localISODate(new Date()) }));
+    state.isSample = false;
+    save(state);
+  }
+
   function addGroup(name) {
     const trimmed = name.trim();
     if (!trimmed) return null;
@@ -310,7 +316,7 @@ const Storage = (() => {
 
   return {
     getState, addGroup, renameGroup, deleteGroup,
-    addCompany, updateCompany, deleteCompany,
+    addCompany, addCompaniesBulk, updateCompany, deleteCompany,
     clearSampleData, replaceAll,
     upcomingBirthdays, currentYearFeeStatus,
     emptyCompany, emptyContact, emptyMembership,

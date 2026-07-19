@@ -246,6 +246,7 @@ const UI = (() => {
         </select>
         <div class="spacer"></div>
         <button class="btn-ghost" id="btnExportExcel">Xuất Excel</button>
+        <label class="btn-ghost file-label">Nhập Excel<input type="file" id="importExcelFile" accept=".xlsx,.xls,.csv" hidden /></label>
         <button class="btn-ghost" id="btnExport">Xuất JSON</button>
         <label class="btn-ghost file-label">Nhập JSON<input type="file" id="importFile" accept="application/json" hidden /></label>
         <button class="btn-primary" id="btnAddCompany">+ Thêm doanh nghiệp</button>
@@ -279,6 +280,11 @@ const UI = (() => {
     document.getElementById('btnExport').addEventListener('click', exportJSON);
     document.getElementById('importFile').addEventListener('change', importJSON);
     document.getElementById('btnExportExcel').addEventListener('click', () => openExportModal(list, state.groups));
+    document.getElementById('importExcelFile').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (file) openImportExcelModal(file);
+      e.target.value = '';
+    });
 
     document.querySelectorAll('[data-view]').forEach(el => el.addEventListener('click', () => openCompanyModal(el.dataset.view, true)));
     document.querySelectorAll('[data-edit]').forEach(el => el.addEventListener('click', () => openCompanyModal(el.dataset.edit, false)));
@@ -379,6 +385,99 @@ const UI = (() => {
       const kind = ExportXLS.download(list, groups, checked, 'danh-sach-hoi-vien');
       closeModal();
       toast(kind === 'xlsx' ? 'Đã xuất file Excel' : 'Đã xuất file CSV (thư viện Excel không tải được, dùng bản CSV tương thích Excel)');
+    });
+  }
+
+  // ---------- Excel import (auto-mapped, user-reviewable) ----------
+  function openImportExcelModal(file) {
+    modalRoot().innerHTML = `
+      <div class="modal-backdrop">
+        <div class="modal">
+          <div class="modal-head"><h2>Đang đọc file...</h2></div>
+          <div class="modal-body"><div class="empty-hint">Đang phân tích "${escapeHtml(file.name)}"...</div></div>
+        </div>
+      </div>`;
+
+    ImportXLS.parseFile(file).then(({ headers, dataRows }) => {
+      if (!headers.length || !dataRows.length) {
+        modalRoot().innerHTML = '';
+        alert('Không tìm thấy dữ liệu trong file. Hãy chắc chắn dòng đầu tiên là tiêu đề cột.');
+        return;
+      }
+      const mapping = ImportXLS.guessMapping(headers);
+      renderImportMapping(file.name, headers, dataRows, mapping);
+    }).catch(err => {
+      modalRoot().innerHTML = '';
+      alert('Không đọc được file: ' + err.message);
+    });
+  }
+
+  function renderImportMapping(filename, headers, dataRows, mapping) {
+    const state = Storage.getState();
+    const optionsHtml = (selected) => {
+      const groups = {};
+      ImportXLS.TARGET_CATALOG.forEach(t => { (groups[t.group] = groups[t.group] || []).push(t); });
+      return `<option value="" ${!selected ? 'selected' : ''}>— Bỏ qua —</option>` +
+        Object.keys(groups).map(g => `<optgroup label="${escapeHtml(g)}">${groups[g].map(t =>
+          `<option value="${t.key}" ${selected === t.key ? 'selected' : ''}>${escapeHtml(t.label)}</option>`).join('')}</optgroup>`).join('');
+    };
+
+    modalRoot().innerHTML = `
+      <div class="modal-backdrop">
+        <div class="modal" style="max-width:900px">
+          <div class="modal-head">
+            <h2>Nhập Excel — kiểm tra ánh xạ cột</h2>
+            <button class="btn-icon" id="modalClose">✕</button>
+          </div>
+          <div class="modal-body">
+            <p class="empty-hint" style="margin-top:0">File "<b style="color:var(--text)">${escapeHtml(filename)}</b>" — <b style="color:var(--text)">${dataRows.length}</b> dòng dữ liệu. Đã tự đoán cột, kiểm tra/sửa lại nếu cần rồi bấm "Nhập dữ liệu".</p>
+            <div class="form-grid" style="margin-bottom:14px">
+              <label>Nhập vào nhóm dữ liệu
+                <select id="importGroupSelect">
+                  ${state.groups.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('')}
+                  <option value="__new__">— Tạo nhóm mới —</option>
+                </select>
+              </label>
+              <label id="newGroupWrap" style="display:none">Tên nhóm mới<input id="importNewGroupName" placeholder="VD: HAMEE" /></label>
+            </div>
+            <div class="import-map-table">
+              <div class="import-map-row import-map-head"><span>Cột trong file</span><span>Ví dụ (dòng 1)</span><span>Ánh xạ tới trường trong app</span></div>
+              ${headers.map((h, i) => `
+                <div class="import-map-row">
+                  <span class="cell-title">${escapeHtml(h || '(trống)')}</span>
+                  <span class="cell-sub">${escapeHtml(dataRows[0] ? dataRows[0][i] : '')}</span>
+                  <select data-col-idx="${i}">${optionsHtml(mapping[i])}</select>
+                </div>`).join('')}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-ghost" id="modalCancel">Hủy</button>
+            <button type="button" class="btn-primary" id="btnDoImport">Nhập dữ liệu</button>
+          </div>
+        </div>
+      </div>`;
+
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.getElementById('modalCancel').addEventListener('click', closeModal);
+    document.getElementById('importGroupSelect').addEventListener('change', e => {
+      document.getElementById('newGroupWrap').style.display = e.target.value === '__new__' ? 'flex' : 'none';
+    });
+    document.getElementById('btnDoImport').addEventListener('click', () => {
+      const groupSel = document.getElementById('importGroupSelect').value;
+      let groupId = groupSel;
+      if (groupSel === '__new__') {
+        const name = document.getElementById('importNewGroupName').value.trim();
+        if (!name) { alert('Vui lòng đặt tên cho nhóm mới'); return; }
+        groupId = Storage.addGroup(name).id;
+      }
+      const finalMapping = headers.map((_, i) => document.querySelector(`[data-col-idx="${i}"]`).value || null);
+      const companies = ImportXLS.buildCompaniesFromMapping(dataRows, finalMapping, groupId);
+      if (!companies.length) { alert('Không có dòng nào hợp lệ (cần ít nhất cột "Tên doanh nghiệp").'); return; }
+      Storage.addCompaniesBulk(companies);
+      closeModal();
+      filters.groupId = groupId;
+      route();
+      toast(`Đã nhập ${companies.length} doanh nghiệp`);
     });
   }
 
